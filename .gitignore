@@ -1,0 +1,14 @@
+# ── IDE / Editor ──
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ── OS ──
+.DS_Store
