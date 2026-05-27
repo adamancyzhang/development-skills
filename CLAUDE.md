@@ -35,6 +35,7 @@ Use the `skill-creator` skill for creating new skills, editing existing ones, or
 
 ## Skills in This Repo
 
+- **architecture-thinking** — Mandatory pre-change architectural assessment: Five Gates must be passed before any code modification. Covers dependency direction, separation of concerns, interface-first design, evaluation criteria, trade-off analysis, and anti-pattern detection. No code change without architectural impact assessment first.
 - **code-review-guidelines** — Enforces strict review rules: no silent fallbacks, no copy-paste test logic, fail loud on configuration errors, structural decomposition for testability.
 - **test-driven-development** — Enforces RED-GREEN-REFACTOR with mandatory verification at each phase, test governance (core vs scratch classification), and mock trust-justification requirements.
 
