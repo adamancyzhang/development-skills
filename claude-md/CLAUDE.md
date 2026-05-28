@@ -26,6 +26,8 @@ Before implementing:
 
 Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
+> See also: `architecture-thinking` (Minimal Viable Architecture, no premature generalization), `coding-conventions` (No Over-Design, Forward Thinking Without Forward Building).
+
 ## 3. Surgical Changes
 
 **Touch only what you must. Clean up only your own mess.**
@@ -60,15 +62,17 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
-## 5. Boundary-Oriented Paradigm (通用边界防御范式)
+> See also: `test-driven-development` for the full RED-GREEN-REFACTOR methodology with test governance and mock discipline.
+
+## 5. Boundary-Oriented Paradigm
 
 When generating, refactoring, or reviewing any code, treat software as a topology of trust and boundary containment.
 
 ### 5.1 Trust Topology & Flow Control
 
-- **Explicit Entry Points:** Recognize all entries where unverified, high-entropy data/signals enter the current system or module. Enforce asymmetric, strict validation at the entry boundary to collapse uncertainty into certainty. If validation fails, fail-fast immediately.
-- **Internal Trust Sanctuary:** Once data passes the entry boundary, components within the internal zone trust each other implicitly based on strict contracts. Do not pollute internal logic with redundant, defensive checks.
-- **Explicit Exit Points:** Identify all exits where control flow or data leaves the domain. Ensure no internal implementation details, raw exceptions, or sensitive metadata leak beyond the exit boundary.
+**Principle:** Validate at boundaries, trust internally, encapsulate at exits. Every value is either validated or trusted — there is no middle ground.
+
+For detailed rules on boundary identification, validation protocol, trusted internal logic, and unified exception handling, invoke `coding-conventions`.
 
 ### 5.2 Four-Dimensional Limit Deduction
 
@@ -94,6 +98,17 @@ Structure your response and code generation according to the following sequence.
 
 #### [CONTRACTUAL CODE]
 *Deliver the clean, robust code that 100% mirrors the audit and mapping above.*
+
+## 6. Skill Routing
+
+When a task involves a specific domain, invoke the corresponding skill instead of duplicating its rules:
+
+| When you... | Invoke |
+|---|---|
+| Write or review any production code | `coding-conventions` |
+| Review any code change before commit | `code-review-guidelines` |
+| Write new features, fix bugs, or refactor | `test-driven-development` |
+| Before ANY code change (assess impact) | `architecture-thinking` |
 
 ---
 
