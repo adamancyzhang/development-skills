@@ -87,6 +87,19 @@ Each perspective yields a hypothesis. Converging hypotheses yield a diagnosis. S
 
 Dispatch in parallel, not sequentially. Synthesize before acting. A fix chosen from one angle is a fix that will need another fix tomorrow.
 
+## 7. Evidence-Based Boundaries
+
+**Don't guess. Find the evidence. Validate at the boundary, trust internally.**
+
+Every boundary — API surface, user input, external data, configuration — is where uncertainty enters the system. At each boundary:
+- Whether a parameter is required, optional, or has a default is not a design choice — it is a fact to be discovered. Find the evidence: API specification, caller contracts, type definitions, documentation.
+- A default value must trace to a source. If you cannot name where it comes from, you are inventing it.
+- Before adding a null check or format validation, verify whether the callers already guarantee that invariant. Redundant validation hides the real boundary gap — close the gap at the boundary instead.
+
+Once a value crosses the boundary and is validated, internal code trusts it absolutely. Scattered defensive checks inside the trusted zone are not safety — they are noise that obscures where the actual boundary gap is.
+
+A boundary decision without evidence is a guess. Guesses at the boundary become bugs in production.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
