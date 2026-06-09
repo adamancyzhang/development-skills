@@ -1,54 +1,68 @@
 # CLAUDE.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+These guidelines are derived from observed failure modes. Each rule exists because its absence produced a measurable failure.
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+**Tradeoff:** Caution over speed. For trivial tasks, use judgment.
 
-## 1. Think Before Coding
+## 1. Evidence-Based Boundaries
+
+**Don't guess. Find the evidence. Validate at the boundary, trust internally.**
+
+Every boundary — interface, incoming information, external sources, configuration — is where uncertainty enters the system. At each boundary:
+- Whether an element is required, optional, or has a default is not a design choice. Find the evidence: specification, contracts, schema definitions, documentation.
+- A default value must trace to a source. If you cannot name where it comes from, you are inventing it.
+- Before adding a check or validation, verify whether upstream already guarantees that invariant. Redundant validation hides the real boundary gap — close the gap at the boundary instead.
+
+Once validated, internal processes trust the value absolutely. Scattered redundant checks inside the trusted zone are noise that obscures where the actual boundary gap is.
+
+A boundary decision without evidence is a guess. Guesses at the boundary become faults in real-world use.
+
+## 2. Context Panorama
+
+**Map the full landscape before cutting. The symptom tells you where, not why.**
+
+Before fixing any error:
+- Trace the complete causal chain from origin to failure point.
+- Distinguish the site of detection from the site of causation — they are rarely the same.
+- Identify what invariants held at each boundary and where the first one was violated.
+
+Skip panorama and you fix the symptom while the root cause survives. You miss sibling paths built on the same faulty assumption. You optimize a local expression of a systemic problem.
+
+Panorama is the prerequisite to precision. The broader the map, the cleaner the cut.
+
+## 3. Multi-Perspective Diagnosis
+
+**No single lens reveals the whole fault. Investigate from multiple angles, in parallel.**
+
+For non-trivial problems, deploy independent perspectives before concluding:
+- Causal structure — what depends on what, what propagates where.
+- Flow path — where information originates, how it transforms, where it diverges.
+- Invariants and preconditions — what each layer assumes, which assumption failed.
+- Timing and state — what else could interleave, what transitions are possible.
+- Fault propagation — where the fault was born, caught, swallowed, or transformed.
+
+Each perspective yields a hypothesis. Converging hypotheses yield a diagnosis. Single-perspective analysis yields a guess.
+
+Dispatch in parallel, not sequentially. Synthesize before acting. A fix from one angle needs another fix tomorrow.
+
+## 4. Think Before Acting
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-Before implementing:
+Before producing work:
 - State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
+- If multiple interpretations exist, present them — don't choose silently.
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 
-## 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-## 3. Surgical Changes
-
-**Minimum diff surface — but cover the full logical radius of each change.**
-
-When editing existing code:
-- Don't refactor things unrelated to the change.
-- Match existing style, even if you'd do it differently.
-- If you notice dead code unrelated to the change, mention it — don't delete it.
-
-A bug rarely exists in isolation. When you identify one error, scan its logical radius — same root cause, same category of mistake, same faulty assumption — and fix them together. One well-scoped pass beats scattered follow-ups.
-
-But don't confuse logical radius with physical proximity. Adjacent code that works correctly is not broken. Fix what shares a cause, not what shares a file.
-
-When your changes create orphans, remove them. Don't leave behind imports with no usage or variables with no readers.
-
-## 4. Goal-Driven Execution
+## 5. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
 
 Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
+- "Add validation" → "Define the invalid cases, confirm they're rejected, confirm valid cases pass"
+- "Fix the problem" → "Reproduce the failure, confirm resolution, confirm no regression"
+- "Restructure X" → "Confirm behavior is unchanged before, confirm it remains unchanged after"
 
 For multi-step tasks, state a brief plan:
 ```
@@ -57,49 +71,32 @@ For multi-step tasks, state a brief plan:
 3. [Step] → verify: [check]
 ```
 
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+Strong success criteria let you iterate independently. Weak criteria ("make it work") require constant clarification.
 
-## 5. Context Panorama
+## 6. Simplicity First
 
-**Map the full landscape before cutting. The symptom tells you where, not why.**
+**Minimum work that solves the problem. Nothing speculative.**
 
-Before fixing any error:
-- Trace the complete call chain from entry point to failure site.
-- Distinguish the site of detection from the site of causation — they are rarely the same.
-- Identify what invariants held at each boundary and where the first one was violated.
+- No features beyond what was asked.
+- No structures built for single-use scenarios.
+- No "flexibility" or "configurability" that wasn't requested.
+- No contingency for impossible scenarios.
+- If your output is voluminous and could be compressed, compress it.
 
-The cost of skipping panorama: you fix the symptom while the root cause survives elsewhere. You miss sibling code paths built on the same faulty assumption. You optimize a local expression of a systemic problem.
+Ask yourself: "Would a seasoned practitioner call this overcomplicated?" If yes, simplify.
 
-Panorama is the prerequisite to precision. The broader the map, the cleaner the cut.
+## 7. Surgical Changes
 
-## 6. Multi-Perspective Diagnosis
+**Minimum change surface — but cover the full logical radius of each change.**
 
-**No single lens reveals the whole fault. Investigate from multiple angles, in parallel.**
+When modifying existing work:
+- Don't restructure things unrelated to the change.
+- Match existing conventions, even if you'd do it differently.
+- If you notice vestigial elements unrelated to the change, mention them — don't delete them.
+- Remove dependencies your changes made unused.
 
-For non-trivial problems, deploy independent perspectives before concluding:
-- Call chain topology — who calls whom, what propagates where.
-- Data flow — where values originate, how they transform, where they diverge.
-- Invariants and preconditions — what each layer assumes about its inputs, which assumption failed.
-- Concurrency and state — what else could interleave, what state transitions are possible.
-- Error propagation — where the error was born, caught, swallowed, or transformed.
-
-Each perspective yields a hypothesis. Converging hypotheses yield a diagnosis. Single-perspective analysis yields a guess.
-
-Dispatch in parallel, not sequentially. Synthesize before acting. A fix chosen from one angle is a fix that will need another fix tomorrow.
-
-## 7. Evidence-Based Boundaries
-
-**Don't guess. Find the evidence. Validate at the boundary, trust internally.**
-
-Every boundary — API surface, user input, external data, configuration — is where uncertainty enters the system. At each boundary:
-- Whether a parameter is required, optional, or has a default is not a design choice — it is a fact to be discovered. Find the evidence: API specification, caller contracts, type definitions, documentation.
-- A default value must trace to a source. If you cannot name where it comes from, you are inventing it.
-- Before adding a null check or format validation, verify whether the callers already guarantee that invariant. Redundant validation hides the real boundary gap — close the gap at the boundary instead.
-
-Once a value crosses the boundary and is validated, internal code trusts it absolutely. Scattered defensive checks inside the trusted zone are not safety — they are noise that obscures where the actual boundary gap is.
-
-A boundary decision without evidence is a guess. Guesses at the boundary become bugs in production.
+A fault rarely exists in isolation. When you find one error, apply Context Panorama: scan for the same root cause, the same faulty assumption — and fix them together. One well-scoped pass beats scattered follow-ups. But don't conflate logical radius with physical proximity: adjacent work that functions correctly is not broken.
 
 ---
 
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+**These guidelines are working if:** fewer unnecessary changes, fewer rewrites from overcomplication, and clarifying questions come before work rather than after mistakes.
