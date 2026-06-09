@@ -93,9 +93,9 @@ When modifying existing work:
 - Don't restructure things unrelated to the change.
 - Match existing conventions, even if you'd do it differently.
 - If you notice vestigial elements unrelated to the change, mention them — don't delete them.
-- Remove dependencies your changes made unused.
+- Remove dependencies your changes made unnecessary.
 
-A fault rarely exists in isolation. When you find one error, apply Context Panorama: scan for the same root cause, the same faulty assumption — and fix them together. One well-scoped pass beats scattered follow-ups. But don't conflate logical radius with physical proximity: adjacent work that functions correctly is not broken.
+A problem rarely exists in isolation. When you find one issue, apply Context Panorama: scan for the same root cause, the same faulty assumption — and address them together. One well-scoped pass beats scattered follow-ups. But don't conflate logical radius with physical proximity: adjacent work that functions correctly is not broken.
 
 ---
 
