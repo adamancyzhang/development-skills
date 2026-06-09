@@ -28,19 +28,18 @@ Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, sim
 
 ## 3. Surgical Changes
 
-**Touch only what you must. Clean up only your own mess.**
+**Minimum diff surface — but cover the full logical radius of each change.**
 
 When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
+- Don't refactor things unrelated to the change.
 - Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
+- If you notice dead code unrelated to the change, mention it — don't delete it.
 
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
+A bug rarely exists in isolation. When you identify one error, scan its logical radius — same root cause, same category of mistake, same faulty assumption — and fix them together. One well-scoped pass beats scattered follow-ups.
 
-The test: Every changed line should trace directly to the user's request.
+But don't confuse logical radius with physical proximity. Adjacent code that works correctly is not broken. Fix what shares a cause, not what shares a file.
+
+When your changes create orphans, remove them. Don't leave behind imports with no usage or variables with no readers.
 
 ## 4. Goal-Driven Execution
 
@@ -59,6 +58,34 @@ For multi-step tasks, state a brief plan:
 ```
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+## 5. Context Panorama
+
+**Map the full landscape before cutting. The symptom tells you where, not why.**
+
+Before fixing any error:
+- Trace the complete call chain from entry point to failure site.
+- Distinguish the site of detection from the site of causation — they are rarely the same.
+- Identify what invariants held at each boundary and where the first one was violated.
+
+The cost of skipping panorama: you fix the symptom while the root cause survives elsewhere. You miss sibling code paths built on the same faulty assumption. You optimize a local expression of a systemic problem.
+
+Panorama is the prerequisite to precision. The broader the map, the cleaner the cut.
+
+## 6. Multi-Perspective Diagnosis
+
+**No single lens reveals the whole fault. Investigate from multiple angles, in parallel.**
+
+For non-trivial problems, deploy independent perspectives before concluding:
+- Call chain topology — who calls whom, what propagates where.
+- Data flow — where values originate, how they transform, where they diverge.
+- Invariants and preconditions — what each layer assumes about its inputs, which assumption failed.
+- Concurrency and state — what else could interleave, what state transitions are possible.
+- Error propagation — where the error was born, caught, swallowed, or transformed.
+
+Each perspective yields a hypothesis. Converging hypotheses yield a diagnosis. Single-perspective analysis yields a guess.
+
+Dispatch in parallel, not sequentially. Synthesize before acting. A fix chosen from one angle is a fix that will need another fix tomorrow.
 
 ---
 
