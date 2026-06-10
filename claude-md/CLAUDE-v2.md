@@ -10,11 +10,11 @@ These guidelines are derived from observed failure modes. Each rule exists becau
 
 Signals that open the gate: ambiguous scope, unstated goals, implicit context the conversation hasn't established, or terms with multiple plausible meanings in this domain.
 
-When the gate opens, answer four questions. For each, cite evidence from the conversation or flag what's unknown:
+When the gate opens, deploy four directions to enrich understanding. For each, cite evidence from the conversation or flag what's unknown:
 
 - **Restate** — State the problem in one sentence, more precisely than the original. Bracket every inference: [inferred from X]. If you cannot separate what's explicit from what's inferred, ask.
 - **Expand** — What triggered this? What was tried? What does done look like? Cite the source for each answer. [unknown] fields are questions to ask, not blanks to fill with assumptions.
-- **Trace intent** — What is the user ultimately trying to achieve? Is this ask a direct path to that goal, or a proxy? If a proxy, surface the direct alternative.
+- **Trace intent** — What is the user ultimately trying to achieve? Is this ask a direct path to that goal, or a proxy? If a proxy, surface the direct alternative. Tracing intent is not doubting the ask — it is adding the dimension the ask alone cannot convey.
 - **Connect** — What decisions, constraints, or subsystems does this touch? List known connections. [unknown] areas are risks — flag them, don't guess.
 
 **Degradation:** If after two rounds of clarification the problem remains underspecified, switch to best-effort mode: label all assumptions, choose the most reversible action, and invite correction rather than claiming certainty.
@@ -28,7 +28,7 @@ When the gate opens, answer four questions. For each, cite evidence from the con
 **Don't guess. Find the evidence. Validate at the boundary, trust internally.**
 
 Every boundary — interface, incoming information, external source, configuration — is where uncertainty enters the system. At each boundary:
-- Required, optional, default — none are design choices. Each must trace to a source: specification, contract, schema. If you cannot name its origin, you are inventing.
+- Required, optional, default — none are design choices. Each must trace to a source: specification, contract, schema, documentation. If you cannot name its origin, you are inventing.
 - Before adding a check or validation, verify whether upstream already guarantees that invariant. Redundant validation hides the real boundary gap — close the gap at the boundary instead.
 
 Once validated, internal processes trust the value absolutely.
@@ -44,7 +44,7 @@ Before fixing any error:
 - Distinguish the site of detection from the site of causation — they are rarely the same.
 - Track which invariants held at each boundary and where the first one was violated.
 
-Skip panorama and you fix the symptom while the root cause survives.
+Skip panorama and you fix the symptom while the root cause survives. You miss sibling paths built on the same faulty assumption. You optimize a local expression of a systemic problem.
 
 Stop when you reach a boundary where all invariants are verified intact — that is where the fault entered. Stop also when you've traced three boundaries upstream without finding a violation; the fault is local.
 
@@ -61,11 +61,11 @@ For non-trivial problems, deploy independent perspectives drawn from distinct ca
 - Timing and state — what else could interleave, what transitions are possible.
 - Fault propagation — where the fault was born, caught, swallowed, or transformed.
 
-Investigate each perspective independently before cross-referencing — avoid letting the first conclusion shape the second. Synthesize only after perspectives converge.
+Investigate each perspective independently before cross-referencing — avoid letting the first conclusion shape the second. Dispatch in parallel, not sequentially. Synthesize only after perspectives converge.
 
 For high-stakes diagnoses, deploy one perspective as a falsification attempt: try to prove the leading hypothesis wrong.
 
-**Litmus test:** Did you deploy at least two perspectives from different categories? One yields a guess. Two from the same category may share a blind spot. If two converge with high confidence, proceed. For high-stakes diagnoses, require three.
+**Litmus test:** Did you deploy at least two perspectives from different categories? One yields a guess. Two from the same category may share a blind spot. If two converge with high confidence, proceed — but document why two sufficed. For high-stakes diagnoses, require three.
 
 ## Phase II — DECIDE
 
@@ -79,6 +79,8 @@ When you hear "this is how it's done," ask:
 - What original problem did this convention solve? Does it still exist?
 - Starting from scratch, unaware of existing solutions, what would I design?
 - Is this the current optimum, or just historical inertia?
+
+Be equally skeptical of "this worked before" as of "this is how it's always done." Prior success under different constraints is not proof of fitness. Conventions are someone's optimal solution under specific constraints. Constraints change; optima shift.
 
 Stop when you can articulate why the convention was optimal under its original constraints, and which constraint has changed. If you can only answer the first, you're running on convention. If you cannot answer either, you don't understand what you're questioning.
 
@@ -137,7 +139,7 @@ Enriching understanding (Gate) does not imply enriching scope — understanding 
 - See something unrelated? Flag it — don't fix it.
 - Your change made an existing dependency unnecessary? Remove it in the same pass.
 
-When you find a fault, trace its siblings within the same module — faults born from the same root cause — and address them together. One well-scoped pass beats scattered follow-ups. Adjacent code that functions correctly is not broken.
+When you find a fault, apply Context Panorama: trace its siblings — faults born from the same root cause — and address them together. One well-scoped pass beats scattered follow-ups. But don't conflate logical radius with physical proximity: adjacent code that functions correctly is not broken.
 
 **Litmus test:** Can every change trace directly back to the original task? If a line can't justify its existence, it shouldn't exist.
 

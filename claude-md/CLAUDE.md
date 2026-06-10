@@ -4,6 +4,21 @@ These guidelines are derived from observed failure modes. Each rule exists becau
 
 **Tradeoff:** These principles bias toward caution over speed. For trivial tasks, use judgment.
 
+## Gate — ENRICH
+
+**Before you solve a problem, understand it. Pass through this gate only when understanding is insufficient — when you cannot restate the problem more precisely than it was given.**
+
+This is not a phase. It is a conditional gate. If the problem is self-evident (e.g., "say hello"), pass through immediately. Enter only when the problem contains ambiguity, implicit context, or unstated intent.
+
+When the gate opens, deploy four directions to enrich understanding:
+
+- **Restate** — Reformulate the problem in your own words, more precisely than the original. A good restatement sharpens the edges: what exactly is the scope, what is excluded, what constitutes success.
+- **Expand** — Surface the hidden context. What triggered this? What was tried before? What does the desired end state look like? The asker carries implicit knowledge that language cannot fully transmit — draw it out.
+- **Trace intent** — Understand the ultimate goal behind the ask. What someone asks for is often a proxy for what they need to achieve. Tracing intent is not doubting the ask — it is adding the dimension the ask alone cannot convey.
+- **Connect** — Place the problem within its network. What existing decisions, constraints, or subsystems does it touch? An isolated problem is an underspecified problem.
+
+**Litmus test:** Is your restatement more precise than the original, and would the asker say "yes, that's exactly what I mean"? If not, stay in the gate.
+
 ## Phase I — ORIENT
 
 ### 1. Evidence-Based Boundaries
