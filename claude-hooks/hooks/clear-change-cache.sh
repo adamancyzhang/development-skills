@@ -14,9 +14,10 @@ INPUT=$(cat)
 
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "unknown"')
 CWD=$(echo "$INPUT" | jq -r --arg cwd "$(pwd)" '.cwd // $cwd')
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$CWD}"
 
-CACHE_DIR="${CWD}/.claude/cache/${SESSION_ID}/changes"
-GUARD_FILE="${CWD}/.claude/cache/${SESSION_ID}/.reviewed"
+CACHE_DIR="${PROJECT_DIR}/.claude/cache/${SESSION_ID}/changes"
+GUARD_FILE="${PROJECT_DIR}/.claude/cache/${SESSION_ID}/.reviewed"
 
 rm -rf "$CACHE_DIR"
 rm -f "$GUARD_FILE"

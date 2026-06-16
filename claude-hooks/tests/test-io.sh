@@ -78,14 +78,19 @@ test_write_io() {
   # ── INPUT (stdin JSON from Claude Code PostToolUse hook) ──────────────────
   local input
   input=$(jq -n '{
-    tool_name: "Write",
     session_id: "io-test-write",
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: "/fake/project",
+    permission_mode: "allow",
+    hook_event_name: "PostToolUse",
+    tool_name: "Write",
     tool_input: {
       file_path: "src/index.ts",
       content: "export const x = 1;\nexport const y = 2;\n"
     },
-    permission_mode: "allow",
-    hook_event_name: "PostToolUse"
+    tool_response: { filePath: "src/index.ts", success: true },
+    tool_use_id: "toolu_01IO001",
+    duration_ms: 12
   }')
 
   printf '%b\n' "${CYAN}── INPUT ──${NC}"
@@ -131,14 +136,20 @@ test_edit_io() {
   # ── INPUT ────────────────────────────────────────────────────────────────
   local input
   input=$(jq -n '{
-    tool_name: "Edit",
     session_id: "io-test-edit",
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: "/fake/project",
+    permission_mode: "default",
+    hook_event_name: "PostToolUse",
+    tool_name: "Edit",
     tool_input: {
       file_path: "src/utils.ts",
       old_string: "function old() {\n  return 1;\n}",
       new_string: "function new() {\n  return 2;\n}"
     },
-    hook_event_name: "PostToolUse"
+    tool_response: { filePath: "src/utils.ts", success: true },
+    tool_use_id: "toolu_01IO002",
+    duration_ms: 8
   }')
 
   printf '%b\n' "${CYAN}── INPUT ──${NC}"
@@ -184,14 +195,20 @@ test_subagent_skip_io() {
   # ── INPUT (has agent_id → should be skipped) ─────────────────────────────
   local input
   input=$(jq -n '{
-    tool_name: "Write",
     session_id: "io-test-sub",
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: "/fake/project",
+    permission_mode: "default",
+    hook_event_name: "PostToolUse",
+    tool_name: "Write",
     agent_id: "subagent-abc-123",
     tool_input: {
       file_path: "src/foo.ts",
       content: "subagent work"
     },
-    hook_event_name: "PostToolUse"
+    tool_response: { filePath: "src/foo.ts", success: true },
+    tool_use_id: "toolu_01IO003",
+    duration_ms: 5
   }')
 
   printf '%b\n' "${CYAN}── INPUT ──${NC}"
@@ -224,13 +241,19 @@ test_exclude_io() {
   # ── INPUT ────────────────────────────────────────────────────────────────
   local input
   input=$(jq -n '{
-    tool_name: "Write",
     session_id: "io-test-excl",
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: "/fake/project",
+    permission_mode: "default",
+    hook_event_name: "PostToolUse",
+    tool_name: "Write",
     tool_input: {
       file_path: "src/generated/auto.ts",
       content: "// auto-generated, do not edit"
     },
-    hook_event_name: "PostToolUse"
+    tool_response: { filePath: "src/generated/auto.ts", success: true },
+    tool_use_id: "toolu_01IO004",
+    duration_ms: 4
   }')
 
   printf '%b\n' "${CYAN}── INPUT ──${NC}"
@@ -283,9 +306,13 @@ test_stop_review_io() {
   # ── INPUT (stdin JSON from Claude Code Stop hook) ────────────────────────
   local input
   input=$(jq -n --arg cwd "$ws" '{
-    hook_event_name: "Stop",
     session_id: "io-test-stop",
-    cwd: $cwd
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: $cwd,
+    permission_mode: "default",
+    hook_event_name: "Stop",
+    stop_hook_active: false,
+    last_assistant_message: "I have completed the changes."
   }')
 
   printf '%b\n' "${CYAN}── INPUT ──${NC}"
@@ -369,9 +396,13 @@ test_guard_io() {
   # ── INPUT ────────────────────────────────────────────────────────────────
   local input
   input=$(jq -n --arg cwd "$ws" '{
-    hook_event_name: "Stop",
     session_id: "io-test-guard",
-    cwd: $cwd
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: $cwd,
+    permission_mode: "default",
+    hook_event_name: "Stop",
+    stop_hook_active: false,
+    last_assistant_message: "Done."
   }')
 
   printf '%b\n' "${CYAN}── INPUT ──${NC}"
@@ -406,9 +437,13 @@ test_empty_review_io() {
   # ── INPUT ────────────────────────────────────────────────────────────────
   local input
   input=$(jq -n --arg cwd "$ws" '{
-    hook_event_name: "Stop",
     session_id: "io-test-empty",
-    cwd: $cwd
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: $cwd,
+    permission_mode: "default",
+    hook_event_name: "Stop",
+    stop_hook_active: false,
+    last_assistant_message: "All done."
   }')
 
   printf '%b\n' "${CYAN}── INPUT ──${NC}"
@@ -446,9 +481,12 @@ test_full_cycle_io() {
   # ── Phase 1: UserPromptSubmit — clear cache ──────────────────────────────
   local clear_input
   clear_input=$(jq -n --arg cwd "$ws" '{
-    hook_event_name: "UserPromptSubmit",
     session_id: "io-test-cycle",
-    cwd: $cwd
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: $cwd,
+    permission_mode: "default",
+    hook_event_name: "UserPromptSubmit",
+    prompt: "please implement the new feature"
   }')
 
   printf '%b\n' "${CYAN}── PHASE 1: UserPromptSubmit (clear cache) ──${NC}"
@@ -459,10 +497,16 @@ test_full_cycle_io() {
   # ── Phase 2: PostToolUse — record a change ─────────────────────────────
   local write_input
   write_input=$(jq -n '{
-    tool_name: "Write",
     session_id: "io-test-cycle",
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: "/fake/project",
+    permission_mode: "default",
+    hook_event_name: "PostToolUse",
+    tool_name: "Write",
     tool_input: { file_path: "src/new-feature.ts", content: "export const feature = 1;\n" },
-    hook_event_name: "PostToolUse"
+    tool_response: { filePath: "src/new-feature.ts", success: true },
+    tool_use_id: "toolu_01CYCLE01",
+    duration_ms: 15
   }')
 
   printf '%b\n' "${CYAN}── PHASE 2: PostToolUse (record change) ──${NC}"
@@ -478,9 +522,13 @@ test_full_cycle_io() {
   # ── Phase 3: Stop — review should trigger (changes exist) ───────────────
   local stop_input
   stop_input=$(jq -n --arg cwd "$ws" '{
-    hook_event_name: "Stop",
     session_id: "io-test-cycle",
-    cwd: $cwd
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: $cwd,
+    permission_mode: "default",
+    hook_event_name: "Stop",
+    stop_hook_active: false,
+    last_assistant_message: "I have implemented the feature."
   }')
 
   printf '%b\n' "${CYAN}── PHASE 3: Stop (trigger review) ──${NC}"
@@ -510,9 +558,12 @@ test_no_change_cycle_io() {
   # ── Phase 1: UserPromptSubmit — clear cache ──────────────────────────────
   local clear_input
   clear_input=$(jq -n --arg cwd "$ws" '{
-    hook_event_name: "UserPromptSubmit",
     session_id: "io-test-nocycle",
-    cwd: $cwd
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: $cwd,
+    permission_mode: "default",
+    hook_event_name: "UserPromptSubmit",
+    prompt: "what time is it"
   }')
 
   printf '%b\n' "${CYAN}── PHASE 1: UserPromptSubmit (clear cache) ──${NC}"
@@ -523,9 +574,13 @@ test_no_change_cycle_io() {
   # ── Phase 2: Stop — no changes, should skip ─────────────────────────────
   local stop_input
   stop_input=$(jq -n --arg cwd "$ws" '{
-    hook_event_name: "Stop",
     session_id: "io-test-nocycle",
-    cwd: $cwd
+    transcript_path: "/fake/transcript.jsonl",
+    cwd: $cwd,
+    permission_mode: "default",
+    hook_event_name: "Stop",
+    stop_hook_active: false,
+    last_assistant_message: "The current time is 3:00 PM."
   }')
 
   printf '%b\n' "${CYAN}── PHASE 2: Stop (no changes → skip) ──${NC}"

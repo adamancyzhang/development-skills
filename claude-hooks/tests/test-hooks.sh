@@ -156,11 +156,16 @@ make_write_input() {
     --arg content "$content" \
     --arg permission_mode "allow" \
     '{
-      tool_name: $tool_name,
       session_id: $session_id,
-      tool_input: { file_path: $file_path, content: $content },
+      transcript_path: "/fake/transcript.jsonl",
+      cwd: "/fake/project",
       permission_mode: $permission_mode,
-      hook_event_name: "PostToolUse"
+      hook_event_name: "PostToolUse",
+      tool_name: $tool_name,
+      tool_input: { file_path: $file_path, content: $content },
+      tool_response: { filePath: $file_path, success: true },
+      tool_use_id: "toolu_01TEST001",
+      duration_ms: 12
     }'
 }
 
@@ -173,10 +178,16 @@ make_edit_input() {
     --arg old_string "$old" \
     --arg new_string "$new" \
     '{
-      tool_name: $tool_name,
       session_id: $session_id,
+      transcript_path: "/fake/transcript.jsonl",
+      cwd: "/fake/project",
+      permission_mode: "default",
+      hook_event_name: "PostToolUse",
+      tool_name: $tool_name,
       tool_input: { file_path: $file_path, old_string: $old_string, new_string: $new_string },
-      hook_event_name: "PostToolUse"
+      tool_response: { filePath: $file_path, success: true },
+      tool_use_id: "toolu_01TEST002",
+      duration_ms: 8
     }'
 }
 
@@ -189,11 +200,17 @@ make_subagent_write_input() {
     --arg file_path "src/foo.ts" \
     --arg content "subagent content" \
     '{
-      tool_name: $tool_name,
       session_id: $session_id,
+      transcript_path: "/fake/transcript.jsonl",
+      cwd: "/fake/project",
+      permission_mode: "default",
+      hook_event_name: "PostToolUse",
+      tool_name: $tool_name,
       agent_id: $agent_id,
       tool_input: { file_path: $file_path, content: $content },
-      hook_event_name: "PostToolUse"
+      tool_response: { filePath: $file_path, success: true },
+      tool_use_id: "toolu_01TEST003",
+      duration_ms: 5
     }'
 }
 
@@ -203,10 +220,16 @@ make_read_input() {
     --arg tool_name "Read" \
     --arg session_id "$session_id" \
     '{
-      tool_name: $tool_name,
       session_id: $session_id,
+      transcript_path: "/fake/transcript.jsonl",
+      cwd: "/fake/project",
+      permission_mode: "default",
+      hook_event_name: "PostToolUse",
+      tool_name: $tool_name,
       tool_input: { file_path: "README.md" },
-      hook_event_name: "PostToolUse"
+      tool_response: { filePath: "README.md", success: true },
+      tool_use_id: "toolu_01TEST004",
+      duration_ms: 3
     }'
 }
 
@@ -217,10 +240,16 @@ make_write_input_no_filepath() {
     --arg session_id "$session_id" \
     --arg content "some content" \
     '{
-      tool_name: $tool_name,
       session_id: $session_id,
+      transcript_path: "/fake/transcript.jsonl",
+      cwd: "/fake/project",
+      permission_mode: "default",
+      hook_event_name: "PostToolUse",
+      tool_name: $tool_name,
       tool_input: { content: $content },
-      hook_event_name: "PostToolUse"
+      tool_response: { success: true },
+      tool_use_id: "toolu_01TEST005",
+      duration_ms: 5
     }'
 }
 
@@ -231,9 +260,13 @@ make_stop_input() {
     --arg session_id "$session_id" \
     --arg cwd "${3:-/tmp/test}" \
     '{
-      hook_event_name: $hook_event_name,
       session_id: $session_id,
-      cwd: $cwd
+      transcript_path: "/fake/transcript.jsonl",
+      cwd: $cwd,
+      permission_mode: "default",
+      hook_event_name: $hook_event_name,
+      stop_hook_active: false,
+      last_assistant_message: "I have completed the task."
     }'
 }
 
@@ -273,9 +306,12 @@ make_user_prompt_submit_input() {
     --arg session_id "$session_id" \
     --arg cwd "${2:-/tmp/test}" \
     '{
-      hook_event_name: $hook_event_name,
       session_id: $session_id,
-      cwd: $cwd
+      transcript_path: "/fake/transcript.jsonl",
+      cwd: $cwd,
+      permission_mode: "default",
+      hook_event_name: $hook_event_name,
+      prompt: "user submitted prompt text"
     }'
 }
 
@@ -470,10 +506,16 @@ test_write_empty_content() {
     --arg file_path "src/empty.ts" \
     --arg content "" \
     '{
-      tool_name: $tool_name,
       session_id: $session_id,
+      transcript_path: "/fake/transcript.jsonl",
+      cwd: "/fake/project",
+      permission_mode: "default",
+      hook_event_name: "PostToolUse",
+      tool_name: $tool_name,
       tool_input: { file_path: $file_path, content: $content },
-      hook_event_name: "PostToolUse"
+      tool_response: { filePath: $file_path, success: true },
+      tool_use_id: "toolu_01TEST006",
+      duration_ms: 2
     }')
 
   run_record_change "$ws" "$input" >/dev/null 2>&1 || true

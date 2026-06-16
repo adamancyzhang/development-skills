@@ -13,12 +13,14 @@ INPUT=$(cat)
 
 HOOK_EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // ""')
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "unknown"')
+# Prefer CLAUDE_PROJECT_DIR (always the project root), fall back to cwd from stdin.
 CWD=$(echo "$INPUT" | jq -r --arg cwd "$(pwd)" '.cwd // $cwd')
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$CWD}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="$SCRIPT_DIR/config.json"
 
-CACHE_DIR="${CWD}/.claude/cache/${SESSION_ID}/changes"
-GUARD_FILE="${CWD}/.claude/cache/${SESSION_ID}/.reviewed"
+CACHE_DIR="${PROJECT_DIR}/.claude/cache/${SESSION_ID}/changes"
+GUARD_FILE="${PROJECT_DIR}/.claude/cache/${SESSION_ID}/.reviewed"
 
 # ── Guard: already reviewed in this session → skip ──────────────────────────
 if [[ -f "$GUARD_FILE" ]]; then
@@ -104,7 +106,7 @@ EOF
 )
 
 # ── Write summary ────────────────────────────────────────────────────────────
-SUMMARY_FILE="${CWD}/.claude/cache/${SESSION_ID}/summary.md"
+SUMMARY_FILE="${PROJECT_DIR}/.claude/cache/${SESSION_ID}/summary.md"
 mkdir -p "$(dirname "$SUMMARY_FILE")"
 echo "$SUMMARY" > "$SUMMARY_FILE"
 
