@@ -9,6 +9,12 @@
 
 set -euo pipefail
 
+if ! [ "${BASH_VERSION:-}" ] || (shopt -o posix 2>/dev/null | grep -q 'on$'); then
+  printf '%s\n' "ERROR: This script requires bash, not sh. POSIX mode detected." >&2
+  printf '%s\n' "Usage: bash $0" >&2
+  exit 1
+fi
+
 # ── Colors ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -24,7 +30,7 @@ WORKSPACES=()
 
 # Ensure jq is available.
 if ! command -v jq &>/dev/null; then
-  echo -e "${RED}ERROR: jq is required but not installed.${NC}"
+  printf '%b\n' "${RED}ERROR: jq is required but not installed.${NC}"
   exit 1
 fi
 
@@ -47,7 +53,7 @@ make_workspace() {
   # Make them executable (cp preserves mode, but ensure)
   chmod +x "$ws/.claude/hooks/record-change.sh"
   chmod +x "$ws/.claude/hooks/review-session.sh"
-  echo "$ws"
+  printf '%s\n' "$ws"
 }
 
 # Write config.json into the workspace's .claude/hooks/ directory.
@@ -90,7 +96,7 @@ assert_eq() {
   if [[ "$expected" == "$actual" ]]; then
     return 0
   else
-    echo -e "  ${RED}FAIL${NC} $label: expected='$expected' actual='$actual'"
+    printf '%b\n' "  ${RED}FAIL${NC} $label: expected='$expected' actual='$actual'"
     return 1
   fi
 }
@@ -100,7 +106,7 @@ assert_contains() {
   if echo "$haystack" | grep -qF "$needle"; then
     return 0
   else
-    echo -e "  ${RED}FAIL${NC} $label: string does not contain '$needle'"
+    printf '%b\n' "  ${RED}FAIL${NC} $label: string does not contain '$needle'"
     return 1
   fi
 }
@@ -110,7 +116,7 @@ assert_file_exists() {
   if [[ -f "$path" ]]; then
     return 0
   else
-    echo -e "  ${RED}FAIL${NC} $label: file not found: $path"
+    printf '%b\n' "  ${RED}FAIL${NC} $label: file not found: $path"
     return 1
   fi
 }
@@ -122,7 +128,7 @@ assert_no_file() {
   if [[ "$count" -eq 0 ]]; then
     return 0
   else
-    echo -e "  ${RED}FAIL${NC} $label: expected no files matching $pattern, found $count"
+    printf '%b\n' "  ${RED}FAIL${NC} $label: expected no files matching $pattern, found $count"
     return 1
   fi
 }
@@ -132,7 +138,7 @@ assert_exit_code() {
   if [[ "$expected" -eq "$actual" ]]; then
     return 0
   else
-    echo -e "  ${RED}FAIL${NC} $label: expected exit=$expected, got exit=$actual"
+    printf '%b\n' "  ${RED}FAIL${NC} $label: expected exit=$expected, got exit=$actual"
     return 1
   fi
 }
@@ -233,9 +239,9 @@ make_stop_input() {
 
 run_test() {
   local name="$1" func="$2"
-  echo -n "  $name ... "
+  printf '%s' "  $name ... "
   if $func; then
-    echo -e "${GREEN}PASS${NC}"
+    printf '%b\n' "${GREEN}PASS${NC}"
     PASSED=$((PASSED + 1))
   else
     FAILED=$((FAILED + 1))
@@ -245,7 +251,7 @@ run_test() {
 run_section() {
   local title="$1"
   echo ""
-  echo -e "${YELLOW}━━━ $title ━━━${NC}"
+  printf '%b\n' "${YELLOW}━━━ $title ━━━${NC}"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -257,7 +263,7 @@ test_write_creates_record() {
   ws=$(make_workspace)
   write_config "$ws" '{"include":["src/**/*.ts"],"exclude":[]}'
   session_id="session-write-01"
-  input=$(make_write_input "$session_id" "src/foo.ts" $'line1\nline2\nline3')
+  input=$(make_write_input "$session_id" "src/foo.ts" "$(printf 'line1\nline2\nline3')")
 
   output=$(run_record_change "$ws" "$input") || true
   record=$(find "$ws/.claude/cache/${session_id}/changes" -name '*.json' | head -1)
@@ -267,7 +273,7 @@ test_write_creates_record() {
   assert_eq "tool" "Write" "$(jq -r '.tool' "$record")" || return 1
   assert_eq "file_path" "src/foo.ts" "$(jq -r '.file_path' "$record")" || return 1
   assert_eq "lines" 3 "$(jq -r '.lines' "$record")" || return 1
-  assert_eq "content" $'line1\nline2\nline3' "$(jq -r '.content' "$record")" || return 1
+  assert_eq "content" "$(printf 'line1\nline2\nline3')" "$(jq -r '.content' "$record")" || return 1
   assert_contains "has timestamp" "T" "$(jq -r '.timestamp' "$record")" || return 1
 }
 
@@ -276,7 +282,7 @@ test_edit_creates_record() {
   ws=$(make_workspace)
   write_config "$ws" '{"include":["src/**/*.ts"],"exclude":[]}'
   session_id="session-edit-01"
-  input=$(make_edit_input "$session_id" "src/bar.ts" $'old line\nold line 2' "new line")
+  input=$(make_edit_input "$session_id" "src/bar.ts" "$(printf 'old line\nold line 2')" "new line")
 
   output=$(run_record_change "$ws" "$input") || true
   record=$(find "$ws/.claude/cache/${session_id}/changes" -name '*.json' | head -1)
@@ -287,7 +293,7 @@ test_edit_creates_record() {
   assert_eq "file_path" "src/bar.ts" "$(jq -r '.file_path' "$record")" || return 1
   assert_eq "old_lines" 2 "$(jq -r '.old_lines' "$record")" || return 1
   assert_eq "new_lines" 1 "$(jq -r '.new_lines' "$record")" || return 1
-  assert_eq "old" $'old line\nold line 2' "$(jq -r '.old' "$record")" || return 1
+  assert_eq "old" "$(printf 'old line\nold line 2')" "$(jq -r '.old' "$record")" || return 1
   assert_eq "new" "new line" "$(jq -r '.new' "$record")" || return 1
 }
 
@@ -303,7 +309,7 @@ test_subagent_skipped() {
 
   # Directory should not exist (no records created).
   if [[ -d "$records_dir" ]] && [[ -n "$(ls -A "$records_dir" 2>/dev/null)" ]]; then
-    echo -e "  ${RED}FAIL${NC} subagent should not create records"
+    printf '%b\n' "  ${RED}FAIL${NC} subagent should not create records"
     return 1
   fi
   return 0
@@ -320,7 +326,7 @@ test_non_write_edit_skipped() {
   records_dir="$ws/.claude/cache/${session_id}/changes"
 
   if [[ -d "$records_dir" ]] && [[ -n "$(ls -A "$records_dir" 2>/dev/null)" ]]; then
-    echo -e "  ${RED}FAIL${NC} Read tool should not create records"
+    printf '%b\n' "  ${RED}FAIL${NC} Read tool should not create records"
     return 1
   fi
   return 0
@@ -338,7 +344,7 @@ test_exclude_pattern_match() {
   records_dir="$ws/.claude/cache/${session_id}/changes"
 
   if [[ -d "$records_dir" ]] && [[ -n "$(ls -A "$records_dir" 2>/dev/null)" ]]; then
-    echo -e "  ${RED}FAIL${NC} excluded file should not be recorded"
+    printf '%b\n' "  ${RED}FAIL${NC} excluded file should not be recorded"
     return 1
   fi
   return 0
@@ -369,7 +375,7 @@ test_include_pattern_no_match() {
   records_dir="$ws/.claude/cache/${session_id}/changes"
 
   if [[ -d "$records_dir" ]] && [[ -n "$(ls -A "$records_dir" 2>/dev/null)" ]]; then
-    echo -e "  ${RED}FAIL${NC} non-matching file should not be recorded"
+    printf '%b\n' "  ${RED}FAIL${NC} non-matching file should not be recorded"
     return 1
   fi
   return 0
@@ -619,7 +625,7 @@ test_custom_prompt_file() {
   assert_contains "uses custom prompt" "CUSTOM PROMPT: check security issues" "$ctx" || return 1
   # Should NOT contain the default hardcoded prompt.
   if echo "$ctx" | grep -q "静默吞异常"; then
-    echo -e "  ${RED}FAIL${NC} should not contain default prompt when promptFile is set"
+    printf '%b\n' "  ${RED}FAIL${NC} should not contain default prompt when promptFile is set"
     return 1
   fi
 }
@@ -663,7 +669,7 @@ test_additional_context_json_structure() {
   local ctx_len
   ctx_len=$(echo "$stdout" | jq -r '.hookSpecificOutput.additionalContext | length')
   if [[ "$ctx_len" -lt 10 ]]; then
-    echo -e "  ${RED}FAIL${NC} additionalContext too short: $ctx_len chars"
+    printf '%b\n' "  ${RED}FAIL${NC} additionalContext too short: $ctx_len chars"
     return 1
   fi
 }
@@ -706,7 +712,7 @@ main() {
 
   echo ""
   echo "============================================="
-  echo -e "Results: ${GREEN}${PASSED} passed${NC}, ${RED}${FAILED} failed${NC}"
+  printf '%b\n' "Results: ${GREEN}${PASSED} passed${NC}, ${RED}${FAILED} failed${NC}"
   echo "============================================="
 
   if [[ "$FAILED" -gt 0 ]]; then
