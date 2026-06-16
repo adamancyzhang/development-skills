@@ -40,7 +40,8 @@ setup_ws() {
   mkdir -p "$ws/.claude/hooks"
   cp "$HOOKS_SRC/record-change.sh" "$ws/.claude/hooks/"
   cp "$HOOKS_SRC/review-session.sh" "$ws/.claude/hooks/"
-  chmod +x "$ws/.claude/hooks/record-change.sh" "$ws/.claude/hooks/review-session.sh"
+  cp "$HOOKS_SRC/clear-change-cache.sh" "$ws/.claude/hooks/"
+  chmod +x "$ws/.claude/hooks/record-change.sh" "$ws/.claude/hooks/review-session.sh" "$ws/.claude/hooks/clear-change-cache.sh"
   echo "$ws"
 }
 
@@ -432,6 +433,118 @@ test_empty_review_io() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Integration: full cycle — UserPromptSubmit → PostToolUse → Stop
+# ═══════════════════════════════════════════════════════════════════════════════
+test_full_cycle_io() {
+  local ws stdout
+  ws=$(setup_ws)
+  echo '{"promptFile":"review-prompt.md"}' > "$ws/.claude/hooks/config.json"
+  printf '%s\n' "Review this cycle's changes." > "$ws/.claude/hooks/review-prompt.md"
+
+  local sid="io-test-cycle"
+
+  # ── Phase 1: UserPromptSubmit — clear cache ──────────────────────────────
+  local clear_input
+  clear_input=$(jq -n --arg cwd "$ws" '{
+    hook_event_name: "UserPromptSubmit",
+    session_id: "io-test-cycle",
+    cwd: $cwd
+  }')
+
+  printf '%b\n' "${CYAN}── PHASE 1: UserPromptSubmit (clear cache) ──${NC}"
+  echo "$clear_input" | jq .
+  echo "$clear_input" | CLAUDE_PROJECT_DIR="$ws" bash "$ws/.claude/hooks/clear-change-cache.sh" 2>/dev/null
+  printf '  cache cleared for new cycle\n\n'
+
+  # ── Phase 2: PostToolUse — record a change ─────────────────────────────
+  local write_input
+  write_input=$(jq -n '{
+    tool_name: "Write",
+    session_id: "io-test-cycle",
+    tool_input: { file_path: "src/new-feature.ts", content: "export const feature = 1;\n" },
+    hook_event_name: "PostToolUse"
+  }')
+
+  printf '%b\n' "${CYAN}── PHASE 2: PostToolUse (record change) ──${NC}"
+  echo "$write_input" | jq .
+  echo "$write_input" | CLAUDE_PROJECT_DIR="$ws" bash "$ws/.claude/hooks/record-change.sh" 2>/dev/null
+  local record
+  record=$(find "$ws/.claude/cache/${sid}/changes" -name '*.json' 2>/dev/null | head -1)
+  if [[ -n "$record" ]]; then
+    printf '  record created: %s\n' "$(jq -r '.file_path' "$record")"
+  fi
+  printf '\n'
+
+  # ── Phase 3: Stop — review should trigger (changes exist) ───────────────
+  local stop_input
+  stop_input=$(jq -n --arg cwd "$ws" '{
+    hook_event_name: "Stop",
+    session_id: "io-test-cycle",
+    cwd: $cwd
+  }')
+
+  printf '%b\n' "${CYAN}── PHASE 3: Stop (trigger review) ──${NC}"
+  echo "$stop_input" | jq .
+  stdout=$(echo "$stop_input" | CLAUDE_PROJECT_DIR="$ws" bash "$ws/.claude/hooks/review-session.sh" 2>/dev/null)
+
+  printf '%b\n' "${CYAN}── OUTPUT ──${NC}"
+  if [[ -n "$stdout" ]] && echo "$stdout" | jq -e '.hookSpecificOutput.additionalContext' >/dev/null 2>&1; then
+    echo "$stdout" | jq '.hookSpecificOutput | {hookEventName, contextPreview: (.additionalContext | split("\n") | .[0:3] | join("\n"))}'
+    assert_pass "Full cycle: review triggered after change"
+  else
+    echo "  (no review — BAD)"
+    assert_fail "Full cycle: expected review output"
+  fi
+
+  teardown_ws "$ws"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Integration: no-change cycle — UserPromptSubmit → Stop (skip)
+# ═══════════════════════════════════════════════════════════════════════════════
+test_no_change_cycle_io() {
+  local ws stdout
+  ws=$(setup_ws)
+  echo '{}' > "$ws/.claude/hooks/config.json"
+
+  # ── Phase 1: UserPromptSubmit — clear cache ──────────────────────────────
+  local clear_input
+  clear_input=$(jq -n --arg cwd "$ws" '{
+    hook_event_name: "UserPromptSubmit",
+    session_id: "io-test-nocycle",
+    cwd: $cwd
+  }')
+
+  printf '%b\n' "${CYAN}── PHASE 1: UserPromptSubmit (clear cache) ──${NC}"
+  echo "$clear_input" | jq .
+  echo "$clear_input" | CLAUDE_PROJECT_DIR="$ws" bash "$ws/.claude/hooks/clear-change-cache.sh" 2>/dev/null
+  printf '  cache cleared for new cycle\n\n'
+
+  # ── Phase 2: Stop — no changes, should skip ─────────────────────────────
+  local stop_input
+  stop_input=$(jq -n --arg cwd "$ws" '{
+    hook_event_name: "Stop",
+    session_id: "io-test-nocycle",
+    cwd: $cwd
+  }')
+
+  printf '%b\n' "${CYAN}── PHASE 2: Stop (no changes → skip) ──${NC}"
+  echo "$stop_input" | jq .
+  stdout=$(echo "$stop_input" | CLAUDE_PROJECT_DIR="$ws" bash "$ws/.claude/hooks/review-session.sh" 2>/dev/null)
+
+  printf '%b\n' "${CYAN}── OUTPUT ──${NC}"
+  if [[ -z "$stdout" ]]; then
+    printf '  (empty — correct: no changes in this cycle)\n'
+    assert_pass "No-change cycle: review correctly skipped"
+  else
+    echo "$stdout" | jq .
+    assert_fail "No-change cycle: expected empty output (no changes)"
+  fi
+
+  teardown_ws "$ws"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -450,6 +563,10 @@ main() {
   test_stop_review_io
   test_guard_io
   test_empty_review_io
+
+  printf '\n%b━━━ Cycle integration ━━━%b\n' "$YELLOW" "$NC"
+  test_full_cycle_io
+  test_no_change_cycle_io
 
   printf '\n=============================================\n'
   printf 'Results: %b%d passed%b, %b%d failed%b\n' \

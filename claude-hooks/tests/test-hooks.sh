@@ -50,9 +50,11 @@ make_workspace() {
   mkdir -p "$ws/.claude/hooks"
   cp "$HOOKS_SRC/record-change.sh" "$ws/.claude/hooks/"
   cp "$HOOKS_SRC/review-session.sh" "$ws/.claude/hooks/"
+  cp "$HOOKS_SRC/clear-change-cache.sh" "$ws/.claude/hooks/"
   # Make them executable (cp preserves mode, but ensure)
   chmod +x "$ws/.claude/hooks/record-change.sh"
   chmod +x "$ws/.claude/hooks/review-session.sh"
+  chmod +x "$ws/.claude/hooks/clear-change-cache.sh"
   printf '%s\n' "$ws"
 }
 
@@ -252,6 +254,68 @@ run_section() {
   local title="$1"
   echo ""
   printf '%b\n' "${YELLOW}━━━ $title ━━━${NC}"
+}
+
+# Run clear-change-cache.sh with stdin JSON and CLAUDE_PROJECT_DIR set.
+run_clear_cache() {
+  local ws="$1" stdin_json="$2"
+  echo "$stdin_json" | CLAUDE_PROJECT_DIR="$ws" bash "$ws/.claude/hooks/clear-change-cache.sh"
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# clear-change-cache.sh tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+make_user_prompt_submit_input() {
+  local session_id="${1:-session-001}"
+  jq -n \
+    --arg hook_event_name "UserPromptSubmit" \
+    --arg session_id "$session_id" \
+    --arg cwd "${2:-/tmp/test}" \
+    '{
+      hook_event_name: $hook_event_name,
+      session_id: $session_id,
+      cwd: $cwd
+    }'
+}
+
+test_clear_removes_change_records() {
+  local ws session_id input
+  ws=$(make_workspace)
+  session_id="session-clear-01"
+
+  # Pre-populate change records.
+  mkdir -p "$ws/.claude/cache/${session_id}/changes"
+  echo '{"tool":"Write","file_path":"src/a.ts","action":"write","lines":1,"content":"x"}' \
+    > "$ws/.claude/cache/${session_id}/changes/01.json"
+
+  input=$(make_user_prompt_submit_input "$session_id" "$ws")
+  run_clear_cache "$ws" "$input" >/dev/null 2>&1 || true
+
+  if [[ -d "$ws/.claude/cache/${session_id}/changes" ]]; then
+    printf '%b\n' "  ${RED}FAIL${NC} changes dir should be removed"
+    return 1
+  fi
+  return 0
+}
+
+test_clear_removes_guard_file() {
+  local ws session_id input
+  ws=$(make_workspace)
+  session_id="session-clear-02"
+
+  # Pre-create guard file.
+  mkdir -p "$ws/.claude/cache/${session_id}"
+  touch "$ws/.claude/cache/${session_id}/.reviewed"
+
+  input=$(make_user_prompt_submit_input "$session_id" "$ws")
+  run_clear_cache "$ws" "$input" >/dev/null 2>&1 || true
+
+  if [[ -f "$ws/.claude/cache/${session_id}/.reviewed" ]]; then
+    printf '%b\n' "  ${RED}FAIL${NC} .reviewed guard file should be removed"
+    return 1
+  fi
+  return 0
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -683,6 +747,10 @@ main() {
   echo "============================================="
   echo " Claude Hooks Unit Tests"
   echo "============================================="
+
+  run_section "clear-change-cache.sh"
+  run_test "Clear removes change records" test_clear_removes_change_records
+  run_test "Clear removes guard file" test_clear_removes_guard_file
 
   run_section "record-change.sh"
   run_test "Write creates record" test_write_creates_record
