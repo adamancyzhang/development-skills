@@ -1,0 +1,15 @@
+{
+  "_description": "Session change tracker — file matching rules. Review prompt is in review-prompt.md.",
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "app/**/*.py"
+  ],
+  "exclude": [
+    "*generated*",
+    "*__pycache__*",
+    "*node_modules*",
+    "*.pb.*"
+  ],
+  "promptFile": "review-prompt.md"
+}
