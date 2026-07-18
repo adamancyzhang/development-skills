@@ -67,17 +67,46 @@ To use a custom file path, set `DB_CONFIG_PATH` in `.env` or the environment:
 DB_CONFIG_PATH=/path/to/my-databases.yaml
 ```
 
+## Transport Modes
+
+The server is a standard FastMCP application. All [FastMCP settings](https://gofastmcp.com/deployment/settings)
+are read from `FASTMCP_`-prefixed env vars or `.env`. Key settings:
+
+```bash
+# .env
+FASTMCP_TRANSPORT=stdio                # stdio (default) | http | sse | streamable-http
+FASTMCP_HOST=127.0.0.1                 # only for http / sse / streamable-http
+FASTMCP_PORT=8000                      # only for http / sse / streamable-http
+FASTMCP_STATELESS_HTTP=false           # if true, new transport per request (no session state)
+```
+
+| `FASTMCP_TRANSPORT` | Endpoint | Notes |
+|---|---|---|
+| `stdio` | — | Subprocess I/O (default) |
+| `sse` | `/sse` + `/messages/` | SSE over HTTP. Best for older clients. |
+| `http` | `/mcp` | Streamable HTTP (alias for `streamable-http`). |
+| `streamable-http` | `/mcp` | Streamable HTTP (2024-11-05). Requires `Accept: application/json, text/event-stream`. |
+
 If no YAML file is found, the server falls back to `.env`-style environment variables.
 
 ### Running
 
 ```bash
+# stdio (default)
 uv run python -m db_query.server
+
+# sse
+FASTMCP_TRANSPORT=sse uv run python -m db_query.server
+# → http://127.0.0.1:8000/sse
+
+# streamable-http
+FASTMCP_TRANSPORT=streamable-http uv run python -m db_query.server
+# → http://127.0.0.1:8000/mcp
 ```
 
 ### Claude Desktop Configuration
 
-Add to `~/.claude/claude_desktop_config.json`:
+#### stdio mode
 
 ```json
 {
@@ -90,9 +119,25 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
+#### HTTP mode
+
+Set `FASTMCP_TRANSPORT=sse` (or `streamable-http`) in `.env`, start the server:
+
+```json
+{
+  "mcpServers": {
+    "db-query": {
+      "url": "http://127.0.0.1:8000/sse"
+    }
+  }
+}
+```
+
 ### Claude Code Configuration
 
 Add to `.claude/settings.local.json`:
+
+#### stdio mode
 
 ```json
 {
@@ -100,6 +145,19 @@ Add to `.claude/settings.local.json`:
     "db-query": {
       "command": "uv",
       "args": ["run", "--directory", "/path/to/mcp/db-query", "python", "-m", "db_query.server"]
+    }
+  }
+}
+```
+
+#### HTTP mode
+
+```json
+{
+  "mcpServers": {
+    "db-query": {
+      "type": "http",
+      "url": "http://127.0.0.1:8000/sse"
     }
   }
 }

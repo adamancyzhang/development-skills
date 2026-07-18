@@ -207,10 +207,19 @@ def _db_value(db_name: _DbNameEnum | str) -> str:
 
 if __name__ == "__main__":
     import atexit
-    import signal
 
+    # Last-resort cleanup when the process exits without a clean lifespan
+    # shutdown (e.g. startup crash before the event loop starts). Normal
+    # shutdown is handled by db_lifespan's finally block which calls the
+    # async close_all(). For HTTP transports, uvicorn handles SIGINT/SIGTERM
+    # gracefully; our own signal handlers would override uvicorn's.
     atexit.register(ConnectionManager.close_all_sync)
-    signal.signal(signal.SIGINT, lambda s, f: (ConnectionManager.close_all_sync(), exit(0)))
-    signal.signal(signal.SIGTERM, lambda s, f: (ConnectionManager.close_all_sync(), exit(0)))
 
-    mcp.run(transport="stdio")
+    # Transport, host, port are read from FastMCP settings
+    # (FASTMCP_TRANSPORT / FASTMCP_HOST / FASTMCP_PORT env vars or .env).
+    try:
+        mcp.run()
+    except KeyboardInterrupt:
+        # uvicorn cancels tasks on SIGINT → anyio raises KeyboardInterrupt.
+        # This is a normal shutdown path, not an error.
+        pass
