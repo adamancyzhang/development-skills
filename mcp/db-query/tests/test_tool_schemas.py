@@ -29,13 +29,12 @@ async def test_print_tool_schemas():
             await session.initialize()
             tools = await session.list_tools()
 
+            result = []
             for t in tools.tools:
-                out = getattr(t, "outputSchema", None)
-                raw = {
+                result.append({
                     "name": t.name,
                     "description": t.description,
                     "inputSchema": t.inputSchema,
-                    "outputSchema": out,
-                }
-                print(f"\n=== {t.name} ===")
-                print(json.dumps(raw, indent=2, ensure_ascii=False))
+                    "outputSchema": getattr(t, "outputSchema", None),
+                })
+            print(json.dumps(result, indent=2, ensure_ascii=False))
