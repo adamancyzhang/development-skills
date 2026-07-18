@@ -22,7 +22,7 @@ class DbConfig:
     name: str
     url: str
     dialect: str
-    max_rows: int = 100
+    max_rows: int = 500
     pool_size: int = 5
     pool_overflow: int = 10
     connect_args: dict = field(default_factory=dict)
@@ -111,7 +111,7 @@ def load_config() -> dict[str, DbConfig]:
             name=name,
             url=url,
             dialect=dialect,
-            max_rows=extra.get("max_rows", 100),
+            max_rows=extra.get("max_rows", 500),
             pool_size=extra.get("pool_size", 5),
             pool_overflow=extra.get("pool_overflow", 10),
         )

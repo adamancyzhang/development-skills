@@ -3,11 +3,11 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastmcp import Context, FastMCP
-from sqlalchemy import text
 
 from .config import load_config
 from .connections import ConnectionManager
 from .exceptions import DbQueryError
+from .models import AggregationFunc, FilterCondition, OrderByClause
 from .query_engine import QueryEngine
 
 
@@ -24,35 +24,60 @@ async def db_lifespan(server: FastMCP):
 mcp = FastMCP(
     "db-query",
     instructions=(
-        "Secure read-only database query service. "
-        "Write standard SQL syntax; the server validates, normalizes, "
-        "and executes queries against configured databases. "
-        "Supports MySQL, PostgreSQL, and Oracle. "
+        "Structured read-only database query service. "
         "Use list_tables and describe_table to discover the schema first, "
-        "then query_database to execute SELECT queries with JOINs, "
-        "aggregations, subqueries, CTEs, and window functions."
+        "then query_table with structured parameters (filters, ordering, "
+        "aggregations, pagination) to retrieve data. "
+        "Single-table queries only. "
+        "Supports MySQL, PostgreSQL, and Oracle."
     ),
     lifespan=db_lifespan,
 )
 
 
 @mcp.tool
-async def query_database(
+async def query_table(
     ctx: Context,
-    sql: str,
+    table: str,
     db_name: str = "default",
+    columns: list[str] | None = None,
+    filters: list[FilterCondition] | None = None,
+    order_by: list[OrderByClause] | None = None,
+    aggregations: list[AggregationFunc] | None = None,
+    group_by: list[str] | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
 ) -> dict:
-    """Execute a read-only SQL query on a configured database.
+    """Query a single table using structured, database-agnostic parameters.
 
-    Write standard SQL syntax. JOINs, subqueries, aggregations, CTEs,
-    and window functions are supported. Only SELECT statements are allowed.
+    Specify columns, filter conditions, sort order, aggregations,
+    grouping, and pagination. The server generates and executes SQL
+    internally — no SQL knowledge needed.
 
     Parameters:
-        sql: SQL query text (standard SQL-like syntax)
-        db_name: Database connection name (matches DB_<NAME>_URL env var)
+        table: Name of the table to query.
+        db_name: Database connection name (default: "default").
+        columns: Columns to select. None or empty means all columns (*).
+        filters: WHERE conditions. Each has column, operator, and value.
+        order_by: ORDER BY clauses with column and direction (asc/desc).
+        aggregations: Aggregation functions (count, sum, avg, min, max).
+            Set column=None with function=count for COUNT(*).
+        group_by: Columns to GROUP BY when using aggregations.
+        limit: Max rows to return (server-enforced cap applies).
+        offset: Rows to skip before returning results.
     """
     try:
-        result = await QueryEngine.execute(db_name, sql)
+        result = await QueryEngine.execute_structured(
+            db_name=db_name,
+            table=table,
+            columns=columns,
+            filters=filters,
+            order_by=order_by,
+            aggregations=aggregations,
+            group_by=group_by,
+            limit=limit,
+            offset=offset,
+        )
         return result.model_dump(mode="json")
     except DbQueryError as e:
         return {
@@ -64,17 +89,16 @@ async def query_database(
 
 @mcp.tool
 async def list_databases(ctx: Context) -> list[dict]:
-    """List all configured database connections with their SQL dialects."""
+    """List all configured database connections with their table counts."""
     names = ConnectionManager.list_databases()
     result = []
     for name in names:
-        dialect = ConnectionManager.get_dialect(name)
         try:
             tables = await QueryEngine.list_tables(name)
             count = len(tables)
         except Exception:
             count = -1
-        result.append({"name": name, "dialect": dialect, "tables_count": count})
+        result.append({"name": name, "tables_count": count})
     return result
 
 
@@ -107,28 +131,6 @@ async def describe_table(
     """
     cols = await QueryEngine.describe_table(db_name, table_name)
     return [c.model_dump() for c in cols]
-
-
-@mcp.tool
-async def get_dialect_info(
-    ctx: Context,
-    db_name: str = "default",
-) -> dict:
-    """Get the SQL dialect and database version for a connection.
-
-    Parameters:
-        db_name: Database connection name
-    """
-    from .query_engine import DIALECTS_WITH_READ_ONLY
-
-    dialect = ConnectionManager.get_dialect(db_name)
-    engine = ConnectionManager.get_engine(db_name)
-    async with engine.connect() as conn:
-        if dialect in DIALECTS_WITH_READ_ONLY:
-            await conn.execute(text("SET TRANSACTION READ ONLY"))
-        result = await conn.execute(text("SELECT version()"))
-        version = result.scalar()
-    return {"name": db_name, "dialect": dialect, "version": str(version)}
 
 
 if __name__ == "__main__":

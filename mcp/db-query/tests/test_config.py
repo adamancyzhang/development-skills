@@ -31,7 +31,7 @@ class TestLoadConfig:
         configs = load_config()
         assert set(configs.keys()) == {"default"}
         assert configs["default"].dialect == "postgresql"
-        assert configs["default"].max_rows == 100
+        assert configs["default"].max_rows == 500
         assert configs["default"].pool_size == 5
 
     def test_multiple_databases(self, monkeypatch):

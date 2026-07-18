@@ -116,15 +116,24 @@ Add to `.claude/settings.local.json`:
 
 ## MCP Tools
 
-### `query_database`
+### `query_table`
 
-Execute a read-only SQL query. Supports JOINs, subqueries, aggregations, CTEs, and window functions.
+Query a single table using structured, database-agnostic parameters. No SQL knowledge required — the LLM fills in typed fields and the server generates and executes SQL internally.
 
 ```
 Parameters:
-  sql      — SQL query text (standard SQL syntax)
-  db_name  — Database connection name (default: "default")
+  table        — Name of the table to query
+  db_name      — Database connection name (default: "default")
+  columns      — Columns to select. None or empty → all columns (*)
+  filters      — WHERE conditions (column, operator, value)
+  order_by     — ORDER BY clauses (column, direction: asc/desc)
+  aggregations — COUNT, SUM, AVG, MIN, MAX
+  group_by     — Columns to GROUP BY
+  limit        — Max rows to return (server cap: 500)
+  offset       — Rows to skip before returning results
 ```
+
+Filter operators: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `like`, `in`, `is_null`, `is_not_null`
 
 Returns:
 ```json
@@ -140,7 +149,7 @@ Returns:
 
 ### `list_databases`
 
-List all configured database connections with their SQL dialects and table counts.
+List all configured database connections with their table counts.
 
 ### `list_tables`
 
@@ -161,22 +170,18 @@ Parameters:
   table_name  — Name of the table
 ```
 
-### `get_dialect_info`
-
-Get the SQL dialect and database version for a connection.
-
 ## Query Pipeline
 
 ```
-LLM writes SQL text
+LLM fills structured query parameters (typed, no SQL)
        ↓
-mo-sql-parsing parse() → JSON parse tree (standard IR)
+sql_builder.build_select_tree() → mo-sql-parsing tree
        ↓
-validate_parse_tree() — reject INSERT/UPDATE/DELETE/DROP/etc.
+validate_parse_tree() — always SELECT
        ↓
 enforce row limit in parse tree
        ↓
-mo-sql-parsing format() → canonical SQL (discards original, eliminates injection)
+mo-sql-parsing format() → canonical SQL
        ↓
 dialect adaptation (Oracle: LIMIT → FETCH FIRST N ROWS ONLY)
        ↓

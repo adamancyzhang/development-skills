@@ -27,6 +27,9 @@ class QueryEngine:
 
     Pipeline: parse SQL -> validate read-only -> enforce row limit ->
     format canonical SQL -> adapt dialect -> execute -> return results.
+
+    For structured queries, execute_structured() builds the parse tree
+    directly instead of parsing user-written SQL.
     """
 
     @staticmethod
@@ -34,6 +37,9 @@ class QueryEngine:
         db_name: str,
         sql_text: str,
     ) -> QueryResult:
+        """Execute raw SQL text. Kept for backward compatibility;
+        prefer execute_structured() for new code.
+        """
         start = time.monotonic()
         query_id = uuid.uuid4().hex[:12]
 
@@ -42,6 +48,74 @@ class QueryEngine:
             parse_tree = parse(clean_sql)
         except Exception as e:
             raise SQLError(f"Failed to parse SQL: {e}", query_id=query_id) from e
+
+        validate_parse_tree(parse_tree)
+
+        engine = ConnectionManager.get_engine(db_name)
+        dialect_name = ConnectionManager.get_dialect(db_name)
+        max_rows = ConnectionManager.get_max_rows(db_name)
+
+        existing_limit = parse_tree.get("limit")
+        effective_limit = enforce_row_count(existing_limit, max_rows)
+        if existing_limit != effective_limit:
+            parse_tree["limit"] = effective_limit
+
+        canonical_sql = mo_format(parse_tree)
+        adapted_sql = _adapt_for_dialect(canonical_sql, dialect_name)
+
+        try:
+            rows, columns = await _execute_sql(engine, adapted_sql, dialect_name)
+        except Exception as e:
+            raise SQLError(f"Query execution failed: {e}", query_id=query_id) from e
+
+        elapsed = time.monotonic() - start
+        truncated = len(rows) > effective_limit
+        if truncated:
+            rows = rows[:effective_limit]
+
+        return QueryResult(
+            columns=columns,
+            rows=rows,
+            row_count=len(rows),
+            truncated=truncated,
+            elapsed_ms=round(elapsed * 1000, 1),
+            query_id=query_id,
+        )
+
+    @staticmethod
+    async def execute_structured(
+        db_name: str,
+        table: str,
+        *,
+        columns: list[str] | None = None,
+        filters: list | None = None,
+        order_by: list | None = None,
+        aggregations: list | None = None,
+        group_by: list[str] | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> QueryResult:
+        """Execute a structured single-table query.
+
+        Structured parameters are converted to a mo-sql-parsing parse
+        tree, then fed through the standard pipeline: validate →
+        enforce row limit → format → dialect adapt → execute.
+        """
+        start = time.monotonic()
+        query_id = uuid.uuid4().hex[:12]
+
+        from .sql_builder import build_select_tree
+
+        parse_tree = build_select_tree(
+            table=table,
+            columns=columns,
+            filters=filters,
+            order_by=order_by,
+            aggregations=aggregations,
+            group_by=group_by,
+            limit=limit,
+            offset=offset,
+        )
 
         validate_parse_tree(parse_tree)
 
