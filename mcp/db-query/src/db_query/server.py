@@ -108,21 +108,6 @@ async def query_table(
 
 
 @mcp.tool
-async def list_databases(ctx: Context) -> list[dict]:
-    """List all configured database connections with their table counts."""
-    names = ConnectionManager.list_databases()
-    result = []
-    for name in names:
-        try:
-            tables = await QueryEngine.list_tables(name)
-            count = len(tables)
-        except Exception:
-            count = -1
-        result.append({"name": name, "tables_count": count})
-    return result
-
-
-@mcp.tool
 async def list_tables(
     ctx: Context,
     db_name: _DbNameEnum = _default_db,
