@@ -12,44 +12,76 @@ MCP server that lets LLMs query databases securely using standard SQL syntax. Th
 
 ## Quick Start
 
+### Prerequisites
+
+- [uv](https://docs.astral.sh/uv/) — Python package manager and venv manager
+
 ### Installation
 
 ```bash
 cd mcp/db-query
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[all]"
-```
-
-Install only the driver you need:
-
-```bash
-pip install -e ".[postgresql]"   # PostgreSQL only
-pip install -e ".[mysql]"        # MySQL only
-pip install -e ".[oracle]"       # Oracle only
+uv sync                              # core dependencies only
+uv sync --extra postgresql           # + PostgreSQL driver
+uv sync --extra mysql                # + MySQL driver
+uv sync --extra oracle               # + Oracle driver
+uv sync --all-extras                 # all drivers + dev tools
 ```
 
 ### Configuration
 
-Configure database connections via environment variables:
+Copy the example file and edit it:
 
 ```bash
-# Required: at least one DB_<NAME>_URL
-export DB_DEFAULT_URL=postgresql+asyncpg://user:pass@host:5432/mydb
-export DB_ANALYTICS_URL=mysql+aiomysql://user:pass@host:3306/analytics
-export DB_LEGACY_URL=oracle+oracledb://user:pass@host:1521/SERVICENAME
+cp .env.example .env
+```
 
-# Optional: per-connection settings
-export DB_DEFAULT_MAX_ROWS=500       # Max rows per query (default: 100)
-export DB_DEFAULT_POOL_SIZE=10       # Connection pool size (default: 5)
-export DB_DEFAULT_POOL_OVERFLOW=20   # Pool overflow (default: 10)
+The `.env` file uses friendly per-database environment variables. PostgreSQL is the default:
+
+```bash
+# PostgreSQL (connection name: "default")
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5431
+POSTGRES_USER=ainowork
+POSTGRES_PASSWORD=Abc@1234
+POSTGRES_DB=ainowork
+
+# MySQL (connection name: "mysql") — uncomment to enable
+# MYSQL_HOST=127.0.0.1
+# MYSQL_PORT=3306
+# MYSQL_USER=root
+# MYSQL_PASSWORD=your_password
+# MYSQL_DB=mydb
+
+# Oracle (connection name: "oracle") — uncomment to enable
+# ORACLE_HOST=127.0.0.1
+# ORACLE_PORT=1521
+# ORACLE_USER=scott
+# ORACLE_PASSWORD=tiger
+# ORACLE_SERVICE_NAME=XEPDB1
+```
+
+Optional per-connection overrides:
+
+```bash
+DB_DEFAULT_MAX_ROWS=500       # Max rows per query (default: 100)
+DB_DEFAULT_POOL_SIZE=10       # Connection pool size (default: 5)
+DB_DEFAULT_POOL_OVERFLOW=20   # Pool overflow (default: 10)
+```
+
+#### Advanced: explicit SQLAlchemy URLs
+
+Friendly vars are the recommended way. If you need a SQLAlchemy URL directly (e.g. custom driver or query params), set `DB_<NAME>_URL` — it takes precedence over friendly vars for the same connection name:
+
+```bash
+DB_DEFAULT_URL=postgresql+asyncpg://user:pass@host:5432/mydb
+DB_ANALYTICS_URL=mysql+aiomysql://user:pass@host:3306/analytics
+DB_LEGACY_URL=oracle+oracledb://user:pass@host:1521/SERVICENAME
 ```
 
 ### Running
 
 ```bash
-source .venv/bin/activate
-python -m db_query.server
+uv run python -m db_query.server
 ```
 
 ### Claude Desktop Configuration
@@ -60,11 +92,8 @@ Add to `~/.claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "db-query": {
-      "command": "python",
-      "args": ["-m", "db_query.server"],
-      "env": {
-        "DB_DEFAULT_URL": "postgresql+asyncpg://user:pass@host:5432/mydb"
-      }
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/mcp/db-query", "python", "-m", "db_query.server"]
     }
   }
 }
@@ -78,12 +107,8 @@ Add to `.claude/settings.local.json`:
 {
   "mcpServers": {
     "db-query": {
-      "command": "python",
-      "args": ["-m", "db_query.server"],
-      "env": {
-        "DB_DEFAULT_URL": "postgresql+asyncpg://user:pass@host:5432/mydb",
-        "DB_ANALYTICS_URL": "mysql+aiomysql://user:pass@host:3306/analytics"
-      }
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/mcp/db-query", "python", "-m", "db_query.server"]
     }
   }
 }
@@ -192,6 +217,6 @@ The server uses [mo-sql-parsing](https://pypi.org/project/mo-sql-parsing/) parse
 ## Development
 
 ```bash
-pip install -e ".[dev]"
-pytest -v
+uv sync --all-extras
+uv run pytest -v
 ```

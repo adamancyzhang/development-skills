@@ -38,9 +38,28 @@ class ConnectionManager:
     @classmethod
     async def close_all(cls) -> None:
         """Dispose all engines gracefully during server shutdown."""
-        for name, engine in cls._engines.items():
-            await engine.dispose()
+        for name, engine in list(cls._engines.items()):
+            try:
+                await engine.dispose()
+            except Exception:
+                pass  # Ignore errors during cleanup, close remaining engines
         cls._engines.clear()
+        cls._configs.clear()
+
+    @classmethod
+    def close_all_sync(cls) -> None:
+        """Synchronous cleanup for signal handlers and atexit.
+
+        Uses sync engine dispose so it can run outside the event loop
+        (e.g., during interpreter shutdown after SIGINT).
+        """
+        for name, engine in list(cls._engines.items()):
+            try:
+                engine.sync_engine.dispose()
+            except Exception:
+                pass
+        cls._engines.clear()
+        cls._configs.clear()
 
     @classmethod
     def get_dialect(cls, name: str) -> str:

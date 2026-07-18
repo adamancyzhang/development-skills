@@ -132,4 +132,12 @@ async def get_dialect_info(
 
 
 if __name__ == "__main__":
+    import atexit
+    import signal
+
+    atexit.register(ConnectionManager.close_all_sync)
+    # Handle SIGINT/SIGTERM gracefully: run sync cleanup then re-raise
+    signal.signal(signal.SIGINT, lambda s, f: (ConnectionManager.close_all_sync(), exit(0)))
+    signal.signal(signal.SIGTERM, lambda s, f: (ConnectionManager.close_all_sync(), exit(0)))
+
     mcp.run(transport="stdio")
