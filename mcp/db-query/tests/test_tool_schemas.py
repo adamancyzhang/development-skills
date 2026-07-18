@@ -29,12 +29,7 @@ async def test_print_tool_schemas():
             await session.initialize()
             tools = await session.list_tools()
 
-            result = []
-            for t in tools.tools:
-                result.append({
-                    "name": t.name,
-                    "description": t.description,
-                    "inputSchema": t.inputSchema,
-                    "outputSchema": getattr(t, "outputSchema", None),
-                })
-            print(json.dumps(result, indent=2, ensure_ascii=False))
+            print(json.dumps(
+                [t.model_dump() for t in tools.tools],
+                indent=2, ensure_ascii=False,
+            ))
