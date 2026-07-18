@@ -151,13 +151,25 @@ class QueryEngine:
         )
 
     @staticmethod
-    async def list_tables(db_name: str) -> list[str]:
+    async def list_tables(db_name: str) -> list[dict]:
+        """List all tables with their comments (database-native descriptions)."""
         engine = ConnectionManager.get_engine(db_name)
         async with engine.connect() as conn:
-            tables = await conn.run_sync(
-                lambda sync_conn: inspect(sync_conn).get_table_names()
-            )
-            return sorted(tables)
+
+            def _get(sync_conn):
+                insp = inspect(sync_conn)
+                names = insp.get_table_names()
+                result = []
+                for name in sorted(names):
+                    try:
+                        c = insp.get_table_comment(name)
+                        comment = c.get("text", "") if c else ""
+                    except Exception:
+                        comment = ""
+                    result.append({"name": name, "comment": comment})
+                return result
+
+            return await conn.run_sync(_get)
 
     @staticmethod
     async def describe_table(

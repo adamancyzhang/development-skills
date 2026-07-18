@@ -111,8 +111,12 @@ async def query_table(
 async def list_tables(
     ctx: Context,
     db_name: _DbNameEnum = _default_db,
-) -> list[str]:
-    """List all tables in a configured database.
+) -> list[dict]:
+    """List all tables with their comments.
+
+    Returns each table's name and database-native comment
+    (COMMENT ON TABLE in PostgreSQL). LLMs can use the
+    comment to understand what each table represents.
 
     Parameters:
         db_name: Database connection to inspect.
