@@ -433,8 +433,7 @@ class TestQueryEngineStructured:
             db_name="test", table="users"
         )
         assert result.row_count == 1
-        # truncated is false because the SQL LIMIT restricts the DB output;
-        # the truncation flag is defense-in-depth for when the DB ignores LIMIT.
+        assert result.truncated
 
     @pytest.mark.asyncio
     async def test_query_id_present(self, sqlite_engine):

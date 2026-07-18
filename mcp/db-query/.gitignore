@@ -20,6 +20,9 @@ htmlcov/
 # ── Database config ──
 databases.yaml
 
+# ── Generated ──
+tests/tool_schemas.json
+
 # ── OS ──
 .DS_Store
 Thumbs.db

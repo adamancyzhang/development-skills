@@ -7,8 +7,10 @@ from fastmcp import Context, FastMCP
 
 from .config import load_config
 from .connections import ConnectionManager
+from .exceptions import DbQueryError
 from .models import (
     AggregationFunc,
+    ApiResponse,
     ColumnInfo,
     FilterCondition,
     OrderByClause,
@@ -64,24 +66,24 @@ mcp = FastMCP(
 @mcp.tool
 async def query_table(
     ctx: Context,
-    table: str,
     db_name: _DbNameEnum = _default_db,
+    table: str = "",
     columns: list[str] | None = None,
     filters: list[FilterCondition] | None = None,
     order_by: list[OrderByClause] | None = None,
     aggregations: list[AggregationFunc] | None = None,
     group_by: list[str] | None = None,
-    limit: int | None = None,
+    limit: int = 500,
     offset: int | None = None,
-) -> QueryResult:
+) -> ApiResponse:
     """Query a single table with structured parameters. No SQL needed.
 
     Typical workflow:
     1. list_tables — discover tables and their purposes via comments
-    2. describe_table("users") — see columns, types, nullable, keys
+    2. describe_table(table="users") — see columns, types, nullable, keys
     3. query_table(table="users", columns=["name","email"],
        filters=[{"column":"status","operator":"eq","value":"active"}],
-       order_by=[{"column":"name","direction":"asc"}], limit=10)
+       order_by=[{"column":"name","direction":"asc"}])
 
     Use aggregations for statistics:
       query_table(table="orders", columns=["status"],
@@ -89,8 +91,8 @@ async def query_table(
         group_by=["status"])
 
     Parameters:
-        table: Name of the table. Get valid names from list_tables.
         db_name: Which database to query. Available options are shown in the enum.
+        table: Name of the table. Get valid names from list_tables.
         columns: Column names to return. Omit or pass null to get all columns.
         filters: List of filter conditions combined with AND.
             Each has: column (use exact name from describe_table),
@@ -101,27 +103,46 @@ async def query_table(
             column (omit for COUNT(*)), and optional alias.
         group_by: Column names to group by. Use when combining regular
             columns with aggregation functions.
-        limit: Maximum rows to return. Server cap is 500.
+        limit: Maximum rows to return. Default 500. Capped at 500.
         offset: Number of rows to skip (for pagination).
     """
-    return await QueryEngine.execute_structured(
-        db_name=_db_value(db_name),
-        table=table,
-        columns=columns,
-        filters=filters,
-        order_by=order_by,
-        aggregations=aggregations,
-        group_by=group_by,
-        limit=limit,
-        offset=offset,
-    )
+    try:
+        result = await QueryEngine.execute_structured(
+            db_name=_db_value(db_name),
+            table=table,
+            columns=columns,
+            filters=filters,
+            order_by=order_by,
+            aggregations=aggregations,
+            group_by=group_by,
+            limit=limit,
+            offset=offset,
+        )
+        # Build summary message from result
+        parts = [f"Returned {result.row_count} row{'s' if result.row_count != 1 else ''}"]
+        if result.truncated:
+            parts.append(
+                "⚠️ Results truncated — the query matched more rows "
+                "than the limit allows. Narrow filters or increase limit "
+                "to see the complete data."
+            )
+        if result.row_count == 0:
+            parts.append("No rows matched the query — try broader filters.")
+        parts.append(f"in {result.elapsed_ms}ms")
+        return ApiResponse(
+            success=True,
+            message=" ".join(parts),
+            data=result,
+        )
+    except DbQueryError as e:
+        return ApiResponse(success=False, message=str(e), data=None)
 
 
 @mcp.tool
 async def list_tables(
     ctx: Context,
     db_name: _DbNameEnum = _default_db,
-) -> list[TableInfo]:
+) -> ApiResponse:
     """List all tables in the database with their descriptions.
 
     Call this first when exploring a database. The comment field
@@ -131,15 +152,20 @@ async def list_tables(
     Parameters:
         db_name: Database connection to inspect.
     """
-    return await QueryEngine.list_tables(_db_value(db_name))
+    tables = await QueryEngine.list_tables(_db_value(db_name))
+    return ApiResponse(
+        success=True,
+        message=f"Found {len(tables)} table{'s' if len(tables) != 1 else ''}",
+        data=tables,
+    )
 
 
 @mcp.tool
 async def describe_table(
     ctx: Context,
     db_name: _DbNameEnum = _default_db,
-    table_name: str = "",
-) -> list[ColumnInfo]:
+    table: str = "",
+) -> ApiResponse:
     """Get the schema of a table: column names, types, nullable, and keys.
 
     Call this after choosing a table via list_tables. Use the returned
@@ -148,21 +174,21 @@ async def describe_table(
 
     Parameters:
         db_name: Database connection to inspect.
-        table_name: Name of the table. Get valid names from list_tables.
+        table: Name of the table. Get valid names from list_tables.
     """
-    return await QueryEngine.describe_table(_db_value(db_name), table_name)
+    cols = await QueryEngine.describe_table(_db_value(db_name), table)
+    return ApiResponse(
+        success=True,
+        message=f"Table {table!r} has {len(cols)} column{'s' if len(cols) != 1 else ''}",
+        data=cols,
+    )
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────
 
 
 def _db_value(db_name: _DbNameEnum | str) -> str:
-    """Extract the string value from a db_name parameter.
-
-    When the Enum type is used, FastMCP/Pydantic converts the incoming
-    string to an enum member; we extract .value. Falls back to str()
-    for the degenerate case where no databases are configured.
-    """
+    """Extract the string value from a db_name parameter."""
     if isinstance(db_name, Enum):
         return db_name.value
     return str(db_name)

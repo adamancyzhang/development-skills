@@ -1,4 +1,4 @@
-"""Dump raw MCP tool JSON schemas — run with pytest -s.
+"""Dump raw MCP tool JSON schemas to tests/tool_schemas.json.
 
 Usage:
     uv run pytest tests/test_tool_schemas.py -s
@@ -16,8 +16,9 @@ from mcp.client.stdio import stdio_client
 
 @pytest.mark.asyncio
 async def test_print_tool_schemas():
-    """Connect to the MCP server and print raw JSON schemas."""
+    """Connect to the MCP server and write raw JSON schemas to a file."""
     project_dir = os.path.join(os.path.dirname(__file__), "..")
+    out_path = os.path.join(os.path.dirname(__file__), "tool_schemas.json")
 
     params = StdioServerParameters(
         command="uv",
@@ -29,7 +30,8 @@ async def test_print_tool_schemas():
             await session.initialize()
             tools = await session.list_tools()
 
-            print(json.dumps(
-                [t.model_dump() for t in tools.tools],
-                indent=2, ensure_ascii=False,
-            ))
+            data = [t.model_dump() for t in tools.tools]
+            with open(out_path, "w") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+
+            print(f"Wrote {len(data)} tool schemas to {out_path}")

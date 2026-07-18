@@ -6,6 +6,17 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class ApiResponse(BaseModel):
+    """Standard wrapper for all tool responses."""
+
+    success: bool = Field(description="Whether the operation succeeded")
+    message: str = Field(description="Human-readable result summary or error detail")
+    data: Any | None = Field(
+        default=None,
+        description="Response payload — QueryResult, list[TableInfo], or list[ColumnInfo]",
+    )
+
+
 class QueryResult(BaseModel):
     """Result of a structured query. columns and rows are aligned by index."""
 

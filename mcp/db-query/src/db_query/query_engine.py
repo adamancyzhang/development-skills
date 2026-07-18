@@ -57,8 +57,8 @@ class QueryEngine:
 
         existing_limit = parse_tree.get("limit")
         effective_limit = enforce_row_count(existing_limit, max_rows)
-        if existing_limit != effective_limit:
-            parse_tree["limit"] = effective_limit
+        # Fetch one extra row to detect truncation reliably
+        parse_tree["limit"] = effective_limit + 1
 
         canonical_sql = mo_format(parse_tree)
         adapted_sql = _adapt_for_dialect(canonical_sql, dialect_name)
@@ -125,8 +125,8 @@ class QueryEngine:
 
         existing_limit = parse_tree.get("limit")
         effective_limit = enforce_row_count(existing_limit, max_rows)
-        if existing_limit != effective_limit:
-            parse_tree["limit"] = effective_limit
+        # Fetch one extra row to detect truncation reliably
+        parse_tree["limit"] = effective_limit + 1
 
         canonical_sql = mo_format(parse_tree)
         adapted_sql = _adapt_for_dialect(canonical_sql, dialect_name)
