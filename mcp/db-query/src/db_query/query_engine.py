@@ -163,7 +163,7 @@ class QueryEngine:
                 for name in sorted(names):
                     try:
                         c = insp.get_table_comment(name)
-                        comment = c.get("text", "") if c else ""
+                        comment = (c.get("text") or "") if c else ""
                     except Exception:
                         comment = ""
                     result.append(TableInfo(name=name, comment=comment))

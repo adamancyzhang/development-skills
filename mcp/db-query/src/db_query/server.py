@@ -74,23 +74,35 @@ async def query_table(
     limit: int | None = None,
     offset: int | None = None,
 ) -> QueryResult:
-    """Query a single table using structured, database-agnostic parameters.
+    """Query a single table with structured parameters. No SQL needed.
 
-    Specify columns, filter conditions, sort order, aggregations,
-    grouping, and pagination. The server generates and executes SQL
-    internally — no SQL knowledge needed.
+    Typical workflow:
+    1. list_tables — discover tables and their purposes via comments
+    2. describe_table("users") — see columns, types, nullable, keys
+    3. query_table(table="users", columns=["name","email"],
+       filters=[{"column":"status","operator":"eq","value":"active"}],
+       order_by=[{"column":"name","direction":"asc"}], limit=10)
+
+    Use aggregations for statistics:
+      query_table(table="orders", columns=["status"],
+        aggregations=[{"function":"sum","column":"amount","alias":"total"}],
+        group_by=["status"])
 
     Parameters:
-        table: Name of the table to query.
-        db_name: Database connection to query.
-        columns: Columns to select. None or empty means all columns (*).
-        filters: WHERE conditions. Each has column, operator, and value.
-        order_by: ORDER BY clauses with column and direction (asc/desc).
-        aggregations: Aggregation functions (count, sum, avg, min, max).
-            Set column=None with function=count for COUNT(*).
-        group_by: Columns to GROUP BY when using aggregations.
-        limit: Max rows to return (server-enforced cap applies).
-        offset: Rows to skip before returning results.
+        table: Name of the table. Get valid names from list_tables.
+        db_name: Which database to query. Available options are shown in the enum.
+        columns: Column names to return. Omit or pass null to get all columns.
+        filters: List of filter conditions combined with AND.
+            Each has: column (use exact name from describe_table),
+            operator (eq/neq/gt/gte/lt/lte/like/in/is_null/is_not_null),
+            value (type must match the column's SQL type from describe_table).
+        order_by: Sort order. Each has: column name, direction (asc or desc).
+        aggregations: Summary functions. Each has: function (count/sum/avg/min/max),
+            column (omit for COUNT(*)), and optional alias.
+        group_by: Column names to group by. Use when combining regular
+            columns with aggregation functions.
+        limit: Maximum rows to return. Server cap is 500.
+        offset: Number of rows to skip (for pagination).
     """
     return await QueryEngine.execute_structured(
         db_name=_db_value(db_name),
@@ -110,11 +122,11 @@ async def list_tables(
     ctx: Context,
     db_name: _DbNameEnum = _default_db,
 ) -> list[TableInfo]:
-    """List all tables with their comments.
+    """List all tables in the database with their descriptions.
 
-    Returns each table's name and database-native comment
-    (COMMENT ON TABLE in PostgreSQL). LLMs can use the
-    comment to understand what each table represents.
+    Call this first when exploring a database. The comment field
+    explains what each table is for — use it to pick the right
+    table before calling describe_table or query_table.
 
     Parameters:
         db_name: Database connection to inspect.
@@ -128,13 +140,15 @@ async def describe_table(
     db_name: _DbNameEnum = _default_db,
     table_name: str = "",
 ) -> list[ColumnInfo]:
-    """Describe the columns of a table.
+    """Get the schema of a table: column names, types, nullable, and keys.
 
-    Returns column name, type, nullable flag, and primary key status.
+    Call this after choosing a table via list_tables. Use the returned
+    column names and types to build query_table arguments — filter values
+    must match the column's SQL type (string for VARCHAR, number for INTEGER, etc.).
 
     Parameters:
         db_name: Database connection to inspect.
-        table_name: Name of the table to describe.
+        table_name: Name of the table. Get valid names from list_tables.
     """
     return await QueryEngine.describe_table(_db_value(db_name), table_name)
 
