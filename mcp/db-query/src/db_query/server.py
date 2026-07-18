@@ -106,6 +106,13 @@ async def query_table(
         limit: Maximum rows to return. Default 500. Capped at 500.
         offset: Number of rows to skip (for pagination).
     """
+    if not table or not table.strip():
+        return ApiResponse(success=False, message="table is required and must not be blank.", data=None)
+    if limit < 1:
+        return ApiResponse(success=False, message=f"limit must be at least 1, got {limit}.", data=None)
+    if offset is not None and offset < 0:
+        return ApiResponse(success=False, message=f"offset must be >= 0, got {offset}.", data=None)
+
     try:
         result = await QueryEngine.execute_structured(
             db_name=_db_value(db_name),
@@ -176,6 +183,8 @@ async def describe_table(
         db_name: Database connection to inspect.
         table: Name of the table. Get valid names from list_tables.
     """
+    if not table or not table.strip():
+        return ApiResponse(success=False, message="table is required and must not be blank.", data=None)
     cols = await QueryEngine.describe_table(_db_value(db_name), table)
     return ApiResponse(
         success=True,
