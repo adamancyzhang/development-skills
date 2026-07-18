@@ -60,6 +60,12 @@ def sqlite_config(sqlite_engine) -> DbConfig:
 
 
 @pytest.fixture(autouse=True)
+def disable_yaml_config(monkeypatch):
+    """Prevent tests from picking up a real databases.yaml file."""
+    monkeypatch.setenv("DB_CONFIG_PATH", "/nonexistent/path")
+
+
+@pytest.fixture(autouse=True)
 def setup_connection_manager(monkeypatch):
     """Reset ConnectionManager before each test."""
     ConnectionManager._engines.clear()

@@ -3,11 +3,17 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import quote, urlparse
 
 from dotenv import load_dotenv
 
 from .exceptions import ConfigurationError
+
+try:
+    import yaml
+except ImportError:
+    yaml = None  # type: ignore[assignment]
 
 _URL_KEY_PATTERN = re.compile(r"^DB_([A-Z][A-Z0-9_]*)_URL$")
 _MAX_ROWS_KEY_PATTERN = re.compile(r"^DB_([A-Z][A-Z0-9_]*)_MAX_ROWS$")
@@ -29,50 +35,33 @@ class DbConfig:
 
 
 def load_config() -> dict[str, DbConfig]:
-    """Build DbConfig dict from environment variables.
+    """Build DbConfig dict from YAML file or environment variables.
 
-    Loads .env file first, then collects connections from two sources
-    (explicit URLs take precedence over friendly vars):
+    Precedence:
+    1. YAML file at DB_CONFIG_PATH or ./databases.yaml
+    2. Environment variables (.env, friendly vars, DB_<NAME>_URL)
 
-    1. Friendly per-database env vars::
-
-        POSTGRES_HOST=127.0.0.1
-        POSTGRES_PORT=5431
-        POSTGRES_USER=ainowork
-        POSTGRES_PASSWORD=Abc@1234
-        POSTGRES_DB=ainowork
-
-        MYSQL_HOST=127.0.0.1
-        MYSQL_PORT=3306
-        MYSQL_USER=root
-        MYSQL_PASSWORD=secret
-        MYSQL_DB=mydb
-
-        ORACLE_HOST=127.0.0.1
-        ORACLE_PORT=1521
-        ORACLE_USER=scott
-        ORACLE_PASSWORD=tiger
-        ORACLE_SERVICE_NAME=XEPDB1
-
-    2. Explicit SQLAlchemy URLs (backward compatible)::
-
-        DB_DEFAULT_URL=postgresql+asyncpg://user:pass@host:5432/mydb
-        DB_ANALYTICS_URL=mysql+aiomysql://user:pass@host:3306/analytics
-
-    Optional per-connection overrides::
-
-        DB_DEFAULT_MAX_ROWS=500
-        DB_DEFAULT_POOL_SIZE=10
-        DB_DEFAULT_POOL_OVERFLOW=20
-
-    Returns a dict mapping lowercase connection name -> DbConfig.
+    Returns a dict mapping connection name -> DbConfig.
     """
     _ensure_dotenv()
 
+    configs = _try_load_yaml()
+    if configs is not None:
+        return configs
+
+    return _load_from_env()
+
+def _load_from_env() -> dict[str, DbConfig]:
+    """Fallback: build DbConfig dict from environment variables.
+
+    Collects connections from two sources:
+    1. Friendly per-database env vars (POSTGRES_*, MYSQL_*, ORACLE_*)
+    2. Explicit SQLAlchemy URLs (DB_<NAME>_URL)
+    Explicit URLs take precedence over friendly vars for the same name.
+    """
     url_entries: list[tuple[str, str]] = []
     overrides: dict[str, dict] = {}
 
-    # Phase 1: Collect explicit DB_<NAME>_URL entries
     for key, value in os.environ.items():
         m = _URL_KEY_PATTERN.match(key)
         if m:
@@ -92,15 +81,13 @@ def load_config() -> dict[str, DbConfig]:
             continue
 
     existing_names = {name for name, _ in url_entries}
-
-    # Phase 2: Fill in from friendly env vars (only if name not already taken)
     _fill_from_friendly_vars(url_entries, existing_names)
 
     if not url_entries:
         raise ConfigurationError(
             "No database connections configured. "
-            "Set POSTGRES_* environment variables in .env "
-            "or at least one DB_<NAME>_URL environment variable."
+            "Create a databases.yaml file, set POSTGRES_* in .env, "
+            "or set at least one DB_<NAME>_URL environment variable."
         )
 
     configs: dict[str, DbConfig] = {}
@@ -117,6 +104,103 @@ def load_config() -> dict[str, DbConfig]:
         )
 
     return configs
+
+
+# ── YAML loading ───────────────────────────────────────────────────────────
+
+
+def _resolve_yaml_path() -> Path | None:
+    """Find the YAML config file path.
+
+    1. DB_CONFIG_PATH env var (if set and file exists, use it; if set
+       but file doesn't exist, return None — don't fall back)
+    2. databases.yaml in current working directory
+    Returns None if no file found.
+    """
+    env_path = os.environ.get("DB_CONFIG_PATH")
+    if env_path:
+        p = Path(env_path)
+        return p if p.exists() else None
+
+    cwd_path = Path("databases.yaml")
+    return cwd_path if cwd_path.exists() else None
+
+
+def _try_load_yaml() -> dict[str, DbConfig] | None:
+    """Try to load config from YAML file. Returns None if no YAML found."""
+    if yaml is None:
+        return None
+
+    yaml_path = _resolve_yaml_path()
+    if yaml_path is None:
+        return None
+
+    with open(yaml_path) as f:
+        data = yaml.safe_load(f)
+
+    if not data or "databases" not in data:
+        return None
+
+    return _build_configs_from_yaml(data["databases"])
+
+
+def _build_configs_from_yaml(entries: dict) -> dict[str, DbConfig]:
+    """Convert YAML database entries to DbConfig dict."""
+    configs: dict[str, DbConfig] = {}
+    for name, entry in entries.items():
+        configs[name] = _build_db_config_from_yaml(name, entry)
+    return configs
+
+
+def _build_db_config_from_yaml(name: str, entry: dict) -> DbConfig:
+    """Build a single DbConfig from a YAML entry."""
+    db_type = entry.get("type", "postgresql")
+    url = _build_url_from_yaml(db_type, entry)
+    return DbConfig(
+        name=name,
+        url=url,
+        dialect=db_type,
+        max_rows=entry.get("max_rows", 500),
+        pool_size=entry.get("pool_size", 5),
+        pool_overflow=entry.get("pool_overflow", 10),
+    )
+
+
+def _build_url_from_yaml(db_type: str, entry: dict) -> str:
+    """Build a SQLAlchemy URL from a YAML entry dict."""
+    host = entry["host"]
+    port = entry.get("port", "")
+    user = entry.get("user", "")
+    password = entry.get("password", "")
+    database = entry.get("database", "")
+    service_name = entry.get("service_name", "")
+
+    encoded_user = quote(user, safe="") if user else ""
+    encoded_password = quote(password, safe="") if password else ""
+
+    if encoded_user and encoded_password:
+        auth = f"{encoded_user}:{encoded_password}@"
+    elif encoded_user:
+        auth = f"{encoded_user}@"
+    else:
+        auth = ""
+
+    if db_type == "postgresql":
+        driver = "asyncpg"
+        netloc = f"{host}:{port}" if port else host
+        return f"postgresql+{driver}://{auth}{netloc}/{database}"
+
+    if db_type == "mysql":
+        driver = "aiomysql"
+        netloc = f"{host}:{port}" if port else host
+        return f"mysql+{driver}://{auth}{netloc}/{database}"
+
+    if db_type == "oracle":
+        driver = "oracledb"
+        netloc = f"{host}:{port}" if port else host
+        return f"oracle+{driver}://{auth}{netloc}/?service_name={service_name}"
+
+    raise ConfigurationError(f"Unsupported database type: {db_type!r}")
 
 
 # ── .env loading ──────────────────────────────────────────────────────────

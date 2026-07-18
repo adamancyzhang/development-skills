@@ -1,0 +1,40 @@
+# ── Database Connections ──
+# Each entry is an independent data source. Add as many as you need.
+# type defaults to postgresql; also supports mysql and oracle.
+# max_rows defaults to 500, pool_size to 5, pool_overflow to 10.
+
+databases:
+  main:
+    host: 127.0.0.1
+    port: 5431
+    user: ainowork
+    password: Abc@1234
+    database: ainowork
+    max_rows: 500
+    pool_size: 10
+    pool_overflow: 20
+
+  # analytics:
+  #   host: 127.0.0.1
+  #   port: 5432
+  #   user: reader
+  #   password: secret
+  #   database: analytics
+
+  # ── MySQL example ──
+  # mysql_db:
+  #   type: mysql
+  #   host: 127.0.0.1
+  #   port: 3306
+  #   user: root
+  #   password: secret
+  #   database: mydb
+
+  # ── Oracle example ──
+  # oracle_db:
+  #   type: oracle
+  #   host: 127.0.0.1
+  #   port: 1521
+  #   user: scott
+  #   password: tiger
+  #   service_name: XEPDB1

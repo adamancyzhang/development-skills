@@ -21,6 +21,8 @@ def _clear_friendly_vars(monkeypatch) -> None:
     for key in list(os.environ):
         if key.startswith(_FRIENDLY_PREFIXES) or key.startswith(_DB_VAR_PREFIX):
             monkeypatch.delenv(key, raising=False)
+    # Prevent YAML loading from picking up databases.yaml in project root
+    monkeypatch.setenv("DB_CONFIG_PATH", "/nonexistent/path")
 
 
 class TestLoadConfig:

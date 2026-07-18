@@ -17,6 +17,9 @@ htmlcov/
 .env.*
 !.env.example
 
+# ── Database config ──
+databases.yaml
+
 # ── OS ──
 .DS_Store
 Thumbs.db

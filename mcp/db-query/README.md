@@ -29,54 +29,45 @@ uv sync --all-extras                 # all drivers + dev tools
 
 ### Configuration
 
-Copy the example file and edit it:
+Create `databases.yaml` from the example:
 
 ```bash
-cp .env.example .env
+cp databases.yaml.example databases.yaml
 ```
 
-The `.env` file uses friendly per-database environment variables. PostgreSQL is the default:
+Each entry is an independent data source — add as many as you need. The name is yours to choose:
+
+```yaml
+databases:
+  main:
+    host: 127.0.0.1
+    port: 5431
+    user: ainowork
+    password: Abc@1234
+    database: ainowork
+    max_rows: 500
+    pool_size: 10
+    pool_overflow: 20
+
+  analytics:
+    host: 127.0.0.1
+    port: 5432
+    user: reader
+    password: secret
+    database: analytics
+```
+
+- `type` defaults to `postgresql`; also supports `mysql` and `oracle`
+- `max_rows` defaults to 500, `pool_size` to 5, `pool_overflow` to 10
+- MySQL uses `database`; Oracle uses `service_name` instead
+
+To use a custom file path, set `DB_CONFIG_PATH` in `.env` or the environment:
 
 ```bash
-# PostgreSQL (connection name: "default")
-POSTGRES_HOST=127.0.0.1
-POSTGRES_PORT=5431
-POSTGRES_USER=ainowork
-POSTGRES_PASSWORD=Abc@1234
-POSTGRES_DB=ainowork
-
-# MySQL (connection name: "mysql") — uncomment to enable
-# MYSQL_HOST=127.0.0.1
-# MYSQL_PORT=3306
-# MYSQL_USER=root
-# MYSQL_PASSWORD=your_password
-# MYSQL_DB=mydb
-
-# Oracle (connection name: "oracle") — uncomment to enable
-# ORACLE_HOST=127.0.0.1
-# ORACLE_PORT=1521
-# ORACLE_USER=scott
-# ORACLE_PASSWORD=tiger
-# ORACLE_SERVICE_NAME=XEPDB1
+DB_CONFIG_PATH=/path/to/my-databases.yaml
 ```
 
-Optional per-connection overrides:
-
-```bash
-DB_DEFAULT_MAX_ROWS=500       # Max rows per query (default: 100)
-DB_DEFAULT_POOL_SIZE=10       # Connection pool size (default: 5)
-DB_DEFAULT_POOL_OVERFLOW=20   # Pool overflow (default: 10)
-```
-
-#### Advanced: explicit SQLAlchemy URLs
-
-Friendly vars are the recommended way. If you need a SQLAlchemy URL directly (e.g. custom driver or query params), set `DB_<NAME>_URL` — it takes precedence over friendly vars for the same connection name:
-
-```bash
-DB_DEFAULT_URL=postgresql+asyncpg://user:pass@host:5432/mydb
-DB_ANALYTICS_URL=mysql+aiomysql://user:pass@host:3306/analytics
-DB_LEGACY_URL=oracle+oracledb://user:pass@host:1521/SERVICENAME
-```
+If no YAML file is found, the server falls back to `.env`-style environment variables.
 
 ### Running
 

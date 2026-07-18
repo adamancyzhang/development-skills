@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from enum import Enum
 
 from fastmcp import Context, FastMCP
 
@@ -10,16 +11,32 @@ from .exceptions import DbQueryError
 from .models import AggregationFunc, FilterCondition, OrderByClause
 from .query_engine import QueryEngine
 
+# ── Load config early to build db_name Enum for tool signatures ────────
+
+_configs = load_config()
+_db_names = sorted(_configs.keys())
+
+if _db_names:
+    _DbNameEnum = Enum("_DbNameEnum", {n: n for n in _db_names})  # type: ignore[misc]
+    _default_db: _DbNameEnum | None = list(_DbNameEnum)[0]
+else:
+    _DbNameEnum = str  # type: ignore[assignment]
+    _default_db = None
+
+
+# ── Lifespan ────────────────────────────────────────────────────────────
+
 
 @asynccontextmanager
 async def db_lifespan(server: FastMCP):
-    configs = load_config()
-    ConnectionManager.initialize(configs)
+    ConnectionManager.initialize(_configs)
     try:
         yield
     finally:
         await ConnectionManager.close_all()
 
+
+# ── FastMCP server ──────────────────────────────────────────────────────
 
 mcp = FastMCP(
     "db-query",
@@ -35,11 +52,14 @@ mcp = FastMCP(
 )
 
 
+# ── Tools ───────────────────────────────────────────────────────────────
+
+
 @mcp.tool
 async def query_table(
     ctx: Context,
     table: str,
-    db_name: str = "default",
+    db_name: _DbNameEnum = _default_db,
     columns: list[str] | None = None,
     filters: list[FilterCondition] | None = None,
     order_by: list[OrderByClause] | None = None,
@@ -56,7 +76,7 @@ async def query_table(
 
     Parameters:
         table: Name of the table to query.
-        db_name: Database connection name (default: "default").
+        db_name: Database connection to query.
         columns: Columns to select. None or empty means all columns (*).
         filters: WHERE conditions. Each has column, operator, and value.
         order_by: ORDER BY clauses with column and direction (asc/desc).
@@ -68,7 +88,7 @@ async def query_table(
     """
     try:
         result = await QueryEngine.execute_structured(
-            db_name=db_name,
+            db_name=_db_value(db_name),
             table=table,
             columns=columns,
             filters=filters,
@@ -105,20 +125,20 @@ async def list_databases(ctx: Context) -> list[dict]:
 @mcp.tool
 async def list_tables(
     ctx: Context,
-    db_name: str = "default",
+    db_name: _DbNameEnum = _default_db,
 ) -> list[str]:
     """List all tables in a configured database.
 
     Parameters:
-        db_name: Database connection name
+        db_name: Database connection to inspect.
     """
-    return await QueryEngine.list_tables(db_name)
+    return await QueryEngine.list_tables(_db_value(db_name))
 
 
 @mcp.tool
 async def describe_table(
     ctx: Context,
-    db_name: str = "default",
+    db_name: _DbNameEnum = _default_db,
     table_name: str = "",
 ) -> list[dict]:
     """Describe the columns of a table.
@@ -126,19 +146,35 @@ async def describe_table(
     Returns column name, type, nullable flag, and primary key status.
 
     Parameters:
-        db_name: Database connection name
-        table_name: Name of the table to describe
+        db_name: Database connection to inspect.
+        table_name: Name of the table to describe.
     """
-    cols = await QueryEngine.describe_table(db_name, table_name)
+    cols = await QueryEngine.describe_table(_db_value(db_name), table_name)
     return [c.model_dump() for c in cols]
 
+
+# ── Helpers ─────────────────────────────────────────────────────────────
+
+
+def _db_value(db_name: _DbNameEnum | str) -> str:
+    """Extract the string value from a db_name parameter.
+
+    When the Enum type is used, FastMCP/Pydantic converts the incoming
+    string to an enum member; we extract .value. Falls back to str()
+    for the degenerate case where no databases are configured.
+    """
+    if isinstance(db_name, Enum):
+        return db_name.value
+    return str(db_name)
+
+
+# ── Entry point ─────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     import atexit
     import signal
 
     atexit.register(ConnectionManager.close_all_sync)
-    # Handle SIGINT/SIGTERM gracefully: run sync cleanup then re-raise
     signal.signal(signal.SIGINT, lambda s, f: (ConnectionManager.close_all_sync(), exit(0)))
     signal.signal(signal.SIGTERM, lambda s, f: (ConnectionManager.close_all_sync(), exit(0)))
 
