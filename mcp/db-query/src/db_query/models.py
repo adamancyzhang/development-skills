@@ -7,19 +7,37 @@ from pydantic import BaseModel, Field
 
 
 class QueryResult(BaseModel):
-    columns: list[str]
-    rows: list[list[Any]]
-    row_count: int
-    truncated: bool = False
-    elapsed_ms: float = 0.0
-    query_id: str = ""
+    """Result of a structured query."""
+
+    columns: list[str] = Field(description="Column names in result order")
+    rows: list[list[Any]] = Field(description="Row data as lists of values")
+    row_count: int = Field(description="Number of rows returned")
+    truncated: bool = Field(
+        default=False,
+        description="Whether results were truncated to the row limit",
+    )
+    elapsed_ms: float = Field(
+        default=0.0, description="Query execution time in milliseconds"
+    )
+    query_id: str = Field(default="", description="Unique query identifier")
 
 
 class ColumnInfo(BaseModel):
-    name: str
-    type: str
-    nullable: bool = True
-    primary_key: bool = False
+    """Schema information for a single table column."""
+
+    name: str = Field(description="Column name")
+    type: str = Field(description="SQL data type")
+    nullable: bool = Field(default=True, description="Whether NULL is allowed")
+    primary_key: bool = Field(default=False, description="Whether this is a primary key")
+
+
+class TableInfo(BaseModel):
+    """Table name and description."""
+
+    name: str = Field(description="Table name")
+    comment: str = Field(
+        default="", description="Database-native table comment (COMMENT ON TABLE)"
+    )
 
 
 class DbInfo(BaseModel):

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from .connections import ConnectionManager
 from .exceptions import SQLError
-from .models import ColumnInfo, QueryResult
+from .models import ColumnInfo, QueryResult, TableInfo
 from .security import enforce_row_count, sanitize_sql, validate_parse_tree
 
 DIALECTS_WITH_READ_ONLY = frozenset({"postgresql", "mysql", "oracle"})
@@ -151,7 +151,7 @@ class QueryEngine:
         )
 
     @staticmethod
-    async def list_tables(db_name: str) -> list[dict]:
+    async def list_tables(db_name: str) -> list[TableInfo]:
         """List all tables with their comments (database-native descriptions)."""
         engine = ConnectionManager.get_engine(db_name)
         async with engine.connect() as conn:
@@ -166,7 +166,7 @@ class QueryEngine:
                         comment = c.get("text", "") if c else ""
                     except Exception:
                         comment = ""
-                    result.append({"name": name, "comment": comment})
+                    result.append(TableInfo(name=name, comment=comment))
                 return result
 
             return await conn.run_sync(_get)

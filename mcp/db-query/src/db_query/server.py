@@ -7,8 +7,14 @@ from fastmcp import Context, FastMCP
 
 from .config import load_config
 from .connections import ConnectionManager
-from .exceptions import DbQueryError
-from .models import AggregationFunc, FilterCondition, OrderByClause
+from .models import (
+    AggregationFunc,
+    ColumnInfo,
+    FilterCondition,
+    OrderByClause,
+    QueryResult,
+    TableInfo,
+)
 from .query_engine import QueryEngine
 
 # ── Load config early to build db_name Enum for tool signatures ────────
@@ -67,7 +73,7 @@ async def query_table(
     group_by: list[str] | None = None,
     limit: int | None = None,
     offset: int | None = None,
-) -> dict:
+) -> QueryResult:
     """Query a single table using structured, database-agnostic parameters.
 
     Specify columns, filter conditions, sort order, aggregations,
@@ -86,32 +92,24 @@ async def query_table(
         limit: Max rows to return (server-enforced cap applies).
         offset: Rows to skip before returning results.
     """
-    try:
-        result = await QueryEngine.execute_structured(
-            db_name=_db_value(db_name),
-            table=table,
-            columns=columns,
-            filters=filters,
-            order_by=order_by,
-            aggregations=aggregations,
-            group_by=group_by,
-            limit=limit,
-            offset=offset,
-        )
-        return result.model_dump(mode="json")
-    except DbQueryError as e:
-        return {
-            "error": e.status_code,
-            "detail": str(e),
-            "query_id": e.query_id,
-        }
+    return await QueryEngine.execute_structured(
+        db_name=_db_value(db_name),
+        table=table,
+        columns=columns,
+        filters=filters,
+        order_by=order_by,
+        aggregations=aggregations,
+        group_by=group_by,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @mcp.tool
 async def list_tables(
     ctx: Context,
     db_name: _DbNameEnum = _default_db,
-) -> list[dict]:
+) -> list[TableInfo]:
     """List all tables with their comments.
 
     Returns each table's name and database-native comment
@@ -129,7 +127,7 @@ async def describe_table(
     ctx: Context,
     db_name: _DbNameEnum = _default_db,
     table_name: str = "",
-) -> list[dict]:
+) -> list[ColumnInfo]:
     """Describe the columns of a table.
 
     Returns column name, type, nullable flag, and primary key status.
@@ -138,8 +136,7 @@ async def describe_table(
         db_name: Database connection to inspect.
         table_name: Name of the table to describe.
     """
-    cols = await QueryEngine.describe_table(_db_value(db_name), table_name)
-    return [c.model_dump() for c in cols]
+    return await QueryEngine.describe_table(_db_value(db_name), table_name)
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────
