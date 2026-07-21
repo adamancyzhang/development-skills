@@ -13,7 +13,7 @@ class ApiResponse(BaseModel):
     message: str = Field(description="Human-readable result summary or error detail")
     data: Any | None = Field(
         default=None,
-        description="Response payload — QueryResult, list[TableInfo], or list[ColumnInfo]",
+        description="Response payload — QueryResult, list[TableInfo], or TableSchema",
     )
 
 
@@ -61,6 +61,130 @@ class TableInfo(BaseModel):
     comment: str = Field(
         default="",
         description="Database-native comment describing the table's purpose. Empty string means no comment was set.",
+    )
+
+
+# ── Rich table schema models (describe_table) ─────────────────────────────
+
+
+class PrimaryKeyInfo(BaseModel):
+    """Primary key constraint for a table."""
+
+    name: str | None = Field(
+        default=None,
+        description="Name of the primary key constraint. May be None on databases that do not assign a name (e.g. SQLite).",
+    )
+    column_names: list[str] = Field(
+        default_factory=list,
+        description="Column(s) that form the primary key. Single-element list for simple PKs, multiple for composite keys.",
+    )
+
+
+class ForeignKeyInfo(BaseModel):
+    """A foreign key constraint referencing another table."""
+
+    name: str | None = Field(
+        default=None,
+        description="Name of the foreign key constraint. May be None if the database does not name it.",
+    )
+    constrained_columns: list[str] = Field(
+        default_factory=list,
+        description="Column(s) in this table that reference another table.",
+    )
+    referred_table: str = Field(
+        default="",
+        description="The table being referenced by this foreign key.",
+    )
+    referred_columns: list[str] = Field(
+        default_factory=list,
+        description="Column(s) in the referenced table, aligned by position with constrained_columns.",
+    )
+    referred_schema: str | None = Field(
+        default=None,
+        description="Schema of the referenced table, if different from the current schema.",
+    )
+
+
+class IndexInfo(BaseModel):
+    """A database index on one or more columns."""
+
+    name: str | None = Field(
+        default=None,
+        description="Name of the index. May be None for auto-generated indexes.",
+    )
+    column_names: list[str] = Field(
+        default_factory=list,
+        description="Column(s) included in the index, in order.",
+    )
+    unique: bool = Field(
+        default=False,
+        description="True if this is a UNIQUE index.",
+    )
+
+
+class UniqueConstraintInfo(BaseModel):
+    """A UNIQUE constraint (not the primary key)."""
+
+    name: str | None = Field(
+        default=None,
+        description="Name of the unique constraint. May be None if the database does not name it.",
+    )
+    column_names: list[str] = Field(
+        default_factory=list,
+        description="Column(s) covered by the constraint.",
+    )
+
+
+class CheckConstraintInfo(BaseModel):
+    """A CHECK constraint with its SQL expression."""
+
+    name: str | None = Field(
+        default=None,
+        description="Name of the check constraint. May be None if the database does not name it.",
+    )
+    sqltext: str = Field(
+        default="",
+        description="The SQL expression that rows must satisfy.",
+    )
+
+
+class TableSchema(BaseModel):
+    """Complete schema metadata for a table, as returned by describe_table.
+
+    Bundles column details, primary key, foreign keys, indexes, unique
+    constraints, check constraints, and the table comment into a single
+    response so the LLM can understand the full structure without
+    multiple round-trips.
+    """
+
+    table_name: str = Field(description="Name of the table.")
+    table_comment: str = Field(
+        default="",
+        description="Database-native comment describing the table's purpose. Empty if no comment was set.",
+    )
+    columns: list[ColumnInfo] = Field(
+        default_factory=list,
+        description="Per-column metadata: name, type, nullable, primary_key flag.",
+    )
+    primary_key: PrimaryKeyInfo | None = Field(
+        default=None,
+        description="Primary key constraint. None if the table has no primary key.",
+    )
+    foreign_keys: list[ForeignKeyInfo] = Field(
+        default_factory=list,
+        description="Foreign key constraints referencing other tables. Use to discover JOIN paths.",
+    )
+    indexes: list[IndexInfo] = Field(
+        default_factory=list,
+        description="Indexes defined on this table. Includes auto-created indexes (e.g. for PK).",
+    )
+    unique_constraints: list[UniqueConstraintInfo] = Field(
+        default_factory=list,
+        description="UNIQUE constraints defined on this table (beyond the primary key).",
+    )
+    check_constraints: list[CheckConstraintInfo] = Field(
+        default_factory=list,
+        description="CHECK constraints defined on this table.",
     )
 
 

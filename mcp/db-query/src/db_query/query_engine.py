@@ -11,7 +11,17 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from .connections import ConnectionManager
 from .exceptions import SQLError
-from .models import ColumnInfo, QueryResult, TableInfo
+from .models import (
+    CheckConstraintInfo,
+    ColumnInfo,
+    ForeignKeyInfo,
+    IndexInfo,
+    PrimaryKeyInfo,
+    QueryResult,
+    TableInfo,
+    TableSchema,
+    UniqueConstraintInfo,
+)
 from .security import enforce_row_count, sanitize_sql, validate_parse_tree
 
 DIALECTS_WITH_READ_ONLY = frozenset({"postgresql", "mysql", "oracle"})
@@ -174,21 +184,19 @@ class QueryEngine:
     @staticmethod
     async def describe_table(
         db_name: str, table_name: str
-    ) -> list[ColumnInfo]:
+    ) -> TableSchema:
+        """Get complete schema metadata for a table.
+
+        Returns a TableSchema with columns, primary key constraint,
+        foreign keys, indexes, unique constraints, check constraints,
+        and the table comment — all from a single database round-trip.
+        """
         engine = ConnectionManager.get_engine(db_name)
         async with engine.connect() as conn:
-            cols = await conn.run_sync(
-                lambda sync_conn: inspect(sync_conn).get_columns(table_name)
+            schema = await conn.run_sync(
+                _build_table_schema, table_name
             )
-            return [
-                ColumnInfo(
-                    name=c["name"],
-                    type=str(c["type"]),
-                    nullable=c.get("nullable", True),
-                    primary_key=c.get("primary_key", False),
-                )
-                for c in cols
-            ]
+            return schema
 
 
 async def _execute_sql(
@@ -202,6 +210,107 @@ async def _execute_sql(
         columns = list(result.keys())
         rows = [list(row) for row in result.fetchall()]
         return rows, columns
+
+
+def _build_table_schema(sync_conn, table_name: str) -> TableSchema:
+    """Build a complete TableSchema by calling all SQLAlchemy inspector methods.
+
+    Runs synchronously inside conn.run_sync(). Each inspector call is
+    wrapped in try/except so that a dialect that does not support a
+    particular reflection method won't break the entire operation.
+    """
+    insp = inspect(sync_conn)
+
+    # 1. Columns
+    raw_cols = insp.get_columns(table_name)
+    columns = [
+        ColumnInfo(
+            name=c["name"],
+            type=str(c["type"]),
+            nullable=c.get("nullable", True),
+            primary_key=c.get("primary_key", False),
+        )
+        for c in raw_cols
+    ]
+
+    # 2. Primary key constraint
+    pk = insp.get_pk_constraint(table_name)
+    pk_columns = pk.get("constrained_columns", [])
+    primary_key = (
+        PrimaryKeyInfo(
+            name=pk.get("name"),
+            column_names=pk_columns,
+        )
+        if pk_columns
+        else None
+    )
+
+    # 3. Foreign keys
+    raw_fks = insp.get_foreign_keys(table_name)
+    foreign_keys = [
+        ForeignKeyInfo(
+            name=fk.get("name"),
+            constrained_columns=fk.get("constrained_columns", []),
+            referred_table=fk.get("referred_table", ""),
+            referred_columns=fk.get("referred_columns", []),
+            referred_schema=fk.get("referred_schema"),
+        )
+        for fk in raw_fks
+    ]
+
+    # 4. Indexes
+    raw_indexes = insp.get_indexes(table_name)
+    indexes = [
+        IndexInfo(
+            name=idx.get("name"),
+            column_names=idx.get("column_names", []),
+            unique=idx.get("unique", False),
+        )
+        for idx in raw_indexes
+    ]
+
+    # 5. Unique constraints
+    raw_ucs = insp.get_unique_constraints(table_name)
+    unique_constraints = [
+        UniqueConstraintInfo(
+            name=uc.get("name"),
+            column_names=uc.get("column_names", []),
+        )
+        for uc in raw_ucs
+    ]
+
+    # 6. Check constraints (may raise NotImplementedError on some backends)
+    check_constraints: list[CheckConstraintInfo] = []
+    try:
+        raw_ccs = insp.get_check_constraints(table_name)
+        check_constraints = [
+            CheckConstraintInfo(
+                name=cc.get("name"),
+                sqltext=str(cc.get("sqltext", "")),
+            )
+            for cc in raw_ccs
+        ]
+    except Exception:
+        pass
+
+    # 7. Table comment
+    table_comment = ""
+    try:
+        comment_result = insp.get_table_comment(table_name)
+        table_comment = comment_result.get("text") or "" if comment_result else ""
+    except Exception:
+        pass
+
+    return TableSchema(
+        table_name=table_name,
+        table_comment=table_comment,
+        columns=columns,
+        primary_key=primary_key,
+        foreign_keys=foreign_keys,
+        indexes=indexes,
+        unique_constraints=unique_constraints,
+        check_constraints=check_constraints,
+    )
 
 
 def _adapt_for_dialect(sql: str, dialect: str) -> str:

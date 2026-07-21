@@ -157,7 +157,7 @@ Add to `.claude/settings.local.json`:
   "mcpServers": {
     "db-query": {
       "type": "http",
-      "url": "http://127.0.0.1:8000/sse"
+      "url": "http://192.168.1.30:8000/mcp"
     }
   }
 }
@@ -211,13 +211,50 @@ Parameters:
 
 ### `describe_table`
 
-Describe the columns of a table (name, type, nullable, primary key).
+Returns complete schema metadata for a table: column details, primary key constraint,
+foreign keys, indexes, unique constraints, check constraints, and the table comment.
 
 ```
 Parameters:
   db_name     — Database connection name (default: "default")
-  table_name  — Name of the table
+  table       — Name of the table
 ```
+
+Returns:
+```json
+{
+  "table_name": "orders",
+  "table_comment": "Customer order records",
+  "columns": [
+    {"name": "id", "type": "INTEGER", "nullable": false, "primary_key": true},
+    {"name": "user_id", "type": "INTEGER", "nullable": false, "primary_key": false},
+    {"name": "total", "type": "REAL", "nullable": false, "primary_key": false}
+  ],
+  "primary_key": {
+    "name": null,
+    "column_names": ["id"]
+  },
+  "foreign_keys": [
+    {
+      "name": null,
+      "constrained_columns": ["user_id"],
+      "referred_table": "users",
+      "referred_columns": ["id"],
+      "referred_schema": null
+    }
+  ],
+  "indexes": [
+    {"name": "idx_orders_user_id", "column_names": ["user_id"], "unique": false}
+  ],
+  "unique_constraints": [],
+  "check_constraints": [
+    {"name": null, "sqltext": "total > 0"}
+  ]
+}
+```
+
+The LLM can use this to build correct queries: foreign keys suggest JOIN paths,
+indexes suggest filter/sort columns, and check constraints describe column-level invariants.
 
 ## Query Pipeline
 

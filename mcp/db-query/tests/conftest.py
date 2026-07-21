@@ -18,16 +18,19 @@ async def sqlite_engine() -> AsyncEngine:
             CREATE TABLE users (
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
-                email TEXT
+                email TEXT UNIQUE
             )
         """))
         await conn.execute(text("""
             CREATE TABLE orders (
                 id INTEGER PRIMARY KEY,
                 user_id INTEGER NOT NULL,
-                total REAL NOT NULL,
+                total REAL NOT NULL CHECK (total > 0),
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
+        """))
+        await conn.execute(text("""
+            CREATE INDEX idx_orders_user_id ON orders (user_id)
         """))
         await conn.execute(text(
             "INSERT INTO users VALUES (1, 'Alice', 'alice@example.com')"

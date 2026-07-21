@@ -16,6 +16,7 @@ from .models import (
     OrderByClause,
     QueryResult,
     TableInfo,
+    TableSchema,
 )
 from .query_engine import QueryEngine
 
@@ -50,7 +51,9 @@ mcp = FastMCP(
     "db-query",
     instructions=(
         "Structured read-only database query service. "
-        "Use list_tables and describe_table to discover the schema first, "
+        "Use list_tables to discover available tables, "
+        "then describe_table to see the full schema "
+        "(columns, PK, FK, indexes, constraints, comments), "
         "then query_table with structured parameters (filters, ordering, "
         "aggregations, pagination) to retrieve data. "
         "Single-table queries only. "
@@ -173,11 +176,19 @@ async def describe_table(
     db_name: _DbNameEnum = _default_db,
     table: str = "",
 ) -> ApiResponse:
-    """Get the schema of a table: column names, types, nullable, and keys.
+    """Get the complete schema of a table: columns, primary key, foreign keys, indexes, constraints, and comment.
+
+    Returns a rich schema object with per-column details plus top-level metadata:
+    - columns: name, type, nullable, and whether each column is part of the PK
+    - primary_key: constraint name and all PK columns as a group
+    - foreign_keys: which columns reference which tables/columns — use to discover JOIN paths
+    - indexes: index names, columns, and uniqueness
+    - unique_constraints: constraint names and covered columns
+    - check_constraints: constraint names and SQL expressions
+    - table_comment: the database-native description of the table
 
     Call this after choosing a table via list_tables. Use the returned
-    column names and types to build query_table arguments — filter values
-    must match the column's SQL type (string for VARCHAR, number for INTEGER, etc.).
+    column names and types to build query_table arguments.
 
     Parameters:
         db_name: Database connection to inspect.
@@ -185,11 +196,16 @@ async def describe_table(
     """
     if not table or not table.strip():
         return ApiResponse(success=False, message="table is required and must not be blank.", data=None)
-    cols = await QueryEngine.describe_table(_db_value(db_name), table)
+    schema = await QueryEngine.describe_table(_db_value(db_name), table)
     return ApiResponse(
         success=True,
-        message=f"Table {table!r} has {len(cols)} column{'s' if len(cols) != 1 else ''}",
-        data=cols,
+        message=(
+            f"Table {table!r} has {len(schema.columns)} column{'s' if len(schema.columns) != 1 else ''}, "
+            f"{'a PK' if schema.primary_key else 'no PK'}, "
+            f"{len(schema.foreign_keys)} FK{'s' if len(schema.foreign_keys) != 1 else ''}, "
+            f"{len(schema.indexes)} index{'es' if len(schema.indexes) != 1 else ''}"
+        ),
+        data=schema,
     )
 
 

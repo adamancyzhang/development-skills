@@ -449,3 +449,105 @@ class TestQueryEngineStructured:
         ConnectionManager._configs["test"] = DbConfig(
             name="test", url="sqlite+aiosqlite://", dialect="sqlite", max_rows=100
         )
+
+
+class TestDescribeTableRichSchema:
+    """describe_table now returns TableSchema with full table metadata."""
+
+    @pytest.mark.asyncio
+    async def test_returns_table_schema(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        schema = await QueryEngine.describe_table("test", "users")
+        from db_query.models import TableSchema
+        assert isinstance(schema, TableSchema)
+
+    @pytest.mark.asyncio
+    async def test_columns_preserved(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        schema = await QueryEngine.describe_table("test", "users")
+        col_names = [c.name for c in schema.columns]
+        assert col_names == ["id", "name", "email"]
+        # Per-column primary_key flag still present
+        id_col = next(c for c in schema.columns if c.name == "id")
+        assert id_col.primary_key is True
+        name_col = next(c for c in schema.columns if c.name == "name")
+        assert name_col.primary_key is False
+
+    @pytest.mark.asyncio
+    async def test_primary_key_constraint(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        schema = await QueryEngine.describe_table("test", "users")
+        assert schema.primary_key is not None
+        assert "id" in schema.primary_key.column_names
+
+    @pytest.mark.asyncio
+    async def test_foreign_keys_orders(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        schema = await QueryEngine.describe_table("test", "orders")
+        assert len(schema.foreign_keys) >= 1
+        fk = schema.foreign_keys[0]
+        assert fk.constrained_columns == ["user_id"]
+        assert fk.referred_table == "users"
+        assert fk.referred_columns == ["id"]
+
+    @pytest.mark.asyncio
+    async def test_no_foreign_keys_users(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        schema = await QueryEngine.describe_table("test", "users")
+        assert len(schema.foreign_keys) == 0
+
+    @pytest.mark.asyncio
+    async def test_indexes(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        schema = await QueryEngine.describe_table("test", "orders")
+        # The explicit index idx_orders_user_id should be present
+        idx_names = [idx.name for idx in schema.indexes]
+        assert any(n and "idx_orders_user_id" in n for n in idx_names), (
+            f"Expected idx_orders_user_id in indexes, got: {idx_names}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_unique_constraint(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        schema = await QueryEngine.describe_table("test", "users")
+        # email has a UNIQUE constraint — should appear in unique_constraints
+        uc_columns = [
+            col for uc in schema.unique_constraints for col in uc.column_names
+        ]
+        assert "email" in uc_columns, (
+            f"Expected email in unique_constraint columns, got: {uc_columns}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_check_constraint(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        schema = await QueryEngine.describe_table("test", "orders")
+        if schema.check_constraints:
+            cc = schema.check_constraints[0]
+            assert "total" in cc.sqltext.lower()
+
+    @pytest.mark.asyncio
+    async def test_table_comment(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        schema = await QueryEngine.describe_table("test", "users")
+        # SQLite does not support comments — should be empty string
+        assert schema.table_comment == ""
+
+    @pytest.mark.asyncio
+    async def test_table_name_present(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        schema = await QueryEngine.describe_table("test", "orders")
+        assert schema.table_name == "orders"
+
+    @pytest.mark.asyncio
+    async def test_nonexistent_table_raises(self, sqlite_engine):
+        self._setup_engine(sqlite_engine)
+        with pytest.raises(Exception):
+            await QueryEngine.describe_table("test", "nonexistent")
+
+    @staticmethod
+    def _setup_engine(sqlite_engine):
+        ConnectionManager._engines["test"] = sqlite_engine
+        ConnectionManager._configs["test"] = DbConfig(
+            name="test", url="sqlite+aiosqlite://", dialect="sqlite", max_rows=100
+        )
