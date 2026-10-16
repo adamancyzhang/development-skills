@@ -39,6 +39,7 @@ Use the `skill-creator` skill for creating new skills, editing existing ones, or
 - **code-review-guidelines** — Enforces strict review rules: no silent fallbacks, no copy-paste test logic, fail loud on configuration errors, structural decomposition for testability.
 - **code-testing** — The testing 内功心法 (internal philosophy): why a test exists, what earns trust, what to verify (observable behavior, the limits), why a hard test is a design diagnosis, and how to keep a suite alive. Principle-prose, project-agnostic, no concrete examples. Complements **test-driven-development** (the test-first ritual/招式) — this is the why and what behind it.
 - **coding-conventions** — Boundary-first validation, trusted internal logic, unified exception handling, design pattern awareness. Use when writing or reviewing any production code.
+- **comment-and-note-conventions** — The discipline of everything written beside code: what earns a comment, what must never be written where it will be trusted, where each kind of note must live so it cannot drift out of date, and how to judge words already on the page. Language- and project-agnostic principle prose, no examples. Pairs with **code-testing** — the tests it describes are the strongest keeper a fact can have.
 - **test-driven-development** — Enforces RED-GREEN-REFACTOR with mandatory verification at each phase, test governance (core vs scratch classification), and mock trust-justification requirements.
 
 ## No Build/Tests
