@@ -1,0 +1,130 @@
+{
+  "expectations": [
+    {
+      "text": "A1·承重注释存活（KEEP）— 删除即误删",
+      "passed": true,
+      "evidence": "原注释逐字保留：# serialized: the vendor SDK is not thread-safe (see vendor docs, \"Concurrency\")."
+    },
+    {
+      "text": "A2·承重注释存活（KEEP）— 删除即误删",
+      "passed": true,
+      "evidence": "原注释逐字保留：# counterintuitive: looks like an off-by-one; the upstream page API is inclusive on both e"
+    },
+    {
+      "text": "A3·清理项已处理（DELETE）— 原样保留即未达标",
+      "passed": false,
+      "evidence": "错误保留：原注释行仍逐字存在：# returns the number of processed records"
+    },
+    {
+      "text": "A4·清理项已处理（DELETE）— 原样保留即未达标",
+      "passed": true,
+      "evidence": "原注释行已不再逐字存在（已清除/转形）"
+    },
+    {
+      "text": "A5·清理项已处理（DELETE）— 原样保留即未达标",
+      "passed": true,
+      "evidence": "原注释行已不再逐字存在（已清除/转形）"
+    },
+    {
+      "text": "A6·承重注释存活（KEEP）— 删除即误删",
+      "passed": true,
+      "evidence": "原注释逐字保留：# TODO: drop the legacy `ts` field once the billing team's migration lands — ticket BILL-1"
+    },
+    {
+      "text": "A7·清理项已处理（DELETE）— 原样保留即未达标",
+      "passed": true,
+      "evidence": "原注释行已不再逐字存在（已清除/转形）"
+    },
+    {
+      "text": "A8·转形项已处理（REWRITE）— 原样保留即未达标",
+      "passed": true,
+      "evidence": "原注释行已不再逐字存在（已清除/转形）"
+    },
+    {
+      "text": "A9·清理项已处理（DELETE）— 原样保留即未达标",
+      "passed": true,
+      "evidence": "原注释行已不再逐字存在（已清除/转形）"
+    },
+    {
+      "text": "A10·承重注释存活（KEEP）— 删除即误删",
+      "passed": true,
+      "evidence": "原注释逐字保留：# the gateway counts retries per tenant; crossing 20/min trips a circuit breaker (ops runb"
+    },
+    {
+      "text": "代码完整性冒烟：非注释行数量一致",
+      "passed": true,
+      "evidence": "原始 28 行 vs 整理后 28 行（仅冒烟，不证明逐行未改）"
+    }
+  ],
+  "summary": {
+    "passed": 10,
+    "failed": 1,
+    "total": 11,
+    "pass_rate": 0.9091
+  },
+  "execution_metrics": {
+    "total_tool_calls": 0,
+    "total_steps": 0,
+    "errors_encountered": 0,
+    "output_chars": 6665,
+    "files_created": [
+      "metrics_pipeline.py",
+      "changes.md"
+    ]
+  },
+  "timing": {
+    "total_duration_seconds": 214.1
+  },
+  "detail": [
+    {
+      "id": "A1",
+      "truth": "KEEP",
+      "passed": true
+    },
+    {
+      "id": "A2",
+      "truth": "KEEP",
+      "passed": true
+    },
+    {
+      "id": "A3",
+      "truth": "DELETE",
+      "passed": false
+    },
+    {
+      "id": "A4",
+      "truth": "DELETE",
+      "passed": true
+    },
+    {
+      "id": "A5",
+      "truth": "DELETE",
+      "passed": true
+    },
+    {
+      "id": "A6",
+      "truth": "KEEP",
+      "passed": true
+    },
+    {
+      "id": "A7",
+      "truth": "DELETE",
+      "passed": true
+    },
+    {
+      "id": "A8",
+      "truth": "REWRITE",
+      "passed": true
+    },
+    {
+      "id": "A9",
+      "truth": "DELETE",
+      "passed": true
+    },
+    {
+      "id": "A10",
+      "truth": "KEEP",
+      "passed": true
+    }
+  ]
+}

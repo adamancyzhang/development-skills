@@ -1,0 +1,29 @@
+{
+  "skill_name": "comment-and-note-conventions",
+  "experiment": "评审 P2-12：Exp1 行为证伪（无 skill 基线 / 旧版 25f474d / 新版 v1.0.1 三臂 × 2 采样）+ Exp2 压缩对照（compressed 变体，§1–§5 论证段压缩为『Keepers and their laws』）",
+  "arms": {
+    "baseline": "不加载任何 skill",
+    "old_skill": "skill-snapshots/old/SKILL.md（25f474d 版本）",
+    "new_skill": "skill-snapshots/new/SKILL.md（v1.0.1 当前版本）",
+    "compressed": "skill-snapshots/compressed/SKILL.md（§1–§5 压缩变体）"
+  },
+  "task_prompt_template": "你是接手这个模块的下一批维护者之一。文件里的注释是历年累积的，有些可能已过时、误导或是废话。请把注释整理一遍：该删的删、该更新的更新、该保留的保留——交出去时，留下的每一条注释都应当是可信的。不要改变任何代码行为。\n输出：把整理后的完整文件写到指定 outputs 目录（保持文件名），并写一份 changes.md，逐条列出你对每一条注释的处置（保留/改写/删除）与一句话理由。",
+  "evals": [
+    {
+      "id": 0,
+      "name": "metrics-pipeline",
+      "prompt": "（同上 task_prompt_template）",
+      "input_file": "scenarios/metrics_pipeline.py",
+      "expected_output": "整理后的 metrics_pipeline.py + changes.md：承重项 A1/A2/A6/A10 保留；复述/快照/清单/旅程类 A3/A4/A5/A9 与原样 A7 清除；位置指针 A8 转形",
+      "files": ["scenarios/metrics_pipeline.py"]
+    },
+    {
+      "id": 1,
+      "name": "session-store",
+      "prompt": "（同上 task_prompt_template）",
+      "input_file": "scenarios/session_store.js",
+      "expected_output": "整理后的 session_store.js + changes.md：承重项 B1/B3/B6/B8 保留；B4/B5/B7/B9 清除；未声明镜像 B2 转形",
+      "files": ["scenarios/session_store.js"]
+    }
+  ]
+}

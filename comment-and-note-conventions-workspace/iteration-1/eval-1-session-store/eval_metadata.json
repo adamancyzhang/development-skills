@@ -1,0 +1,19 @@
+{
+  "eval_id": 1,
+  "eval_name": "session-store",
+  "prompt": "你是接手这个模块的下一批维护者之一。文件里的注释是历年累积的，有些可能已过时、误导或是废话。请把注释整理一遍：该删的删、该更新的更新、该保留的保留——交出去时，留下的每一条注释都应当是可信的。不要改变任何代码行为。输出：整理后的完整文件 + changes.md（逐条处置与理由）。",
+  "scenario": "scenarios/session_store.js",
+  "ground_truth": "ground_truth.json#session_store.js",
+  "assertions": [
+    "B1·承重注释存活（KEEP）— 带坐标镜像(SessionPolicy)删除即误删",
+    "B2·转形项已处理（REWRITE）— 未声明镜像 'keep in sync' 原样保留即未达标",
+    "B3·承重注释存活（KEEP）— Chrome 存储行为删除即误删",
+    "B4·清理项已处理（DELETE）— 遍历循环复述原样保留即未达标",
+    "B5·清理项已处理（DELETE）— Redis 状态快照原样保留即未达标",
+    "B6·承重注释存活（KEEP）— eslint pragma(含 why)删除即误删",
+    "B7·清理项已处理（DELETE）— 迁移旅程叙事原样保留即未达标",
+    "B8·承重注释存活（KEEP）— 仓内路径引用(tuning.tf)删除即误删（§3 判据探针）",
+    "B9·清理项已处理（DELETE）— TTL 历史叙事原样保留即未达标",
+    "代码完整性冒烟：非注释行数量一致"
+  ]
+}

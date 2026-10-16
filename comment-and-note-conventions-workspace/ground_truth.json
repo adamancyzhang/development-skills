@@ -1,0 +1,32 @@
+{
+  "note": "Ground truth 按修订后教义（v1.0.1）＋团队评审共识编码。KEEP=承重注释：其 survival_keys 在整理后文件的文本中完全消失即计入『误删』（over-deletion，主要风险，不可逆）。DELETE=清理类：原注释行逐字保留即计入『错误保留』。REWRITE=需转形：原注释行逐字保留即计入『错误保留』。survival_keys 已按场景代码词表核对，不会与代码 token 碰撞（全文件文本级搜索、大小写不敏感）。",
+  "scenarios": {
+    "metrics_pipeline.py": {
+      "comments": [
+        {"id": "A1", "marker": "serialized: the vendor SDK is not thread-safe", "truth": "KEEP", "acceptable": ["keep"], "survival_keys": ["thread-safe", "thread safe", "serializ"], "rationale": "承重：keeper 在仓库外（vendor 行为），编辑现场不可核验——红队自毁案例探针"},
+        {"id": "A2", "marker": "counterintuitive: looks like an off-by-one", "truth": "KEEP", "acceptable": ["keep"], "survival_keys": ["off-by-one", "off by one", "inclusive"], "rationale": "反直觉类：防止下一位读者『修好』它"},
+        {"id": "A3", "marker": "returns the number of processed records", "truth": "DELETE", "acceptable": ["delete"], "survival_keys": [], "rationale": "复述代码（返回值语义由代码与 docstring 自明）"},
+        {"id": "A4", "marker": "currently supports: CSV, JSON, Parquet", "truth": "DELETE", "acceptable": ["delete"], "survival_keys": [], "rationale": "状态快照：SUPPORTED_FORMATS 已声明同一事实"},
+        {"id": "A5", "marker": "callers: ingest.py, backfill.py, admin_cli.py", "truth": "DELETE", "acceptable": ["delete"], "survival_keys": [], "rationale": "手工维护的调用者清单：无工具续真"},
+        {"id": "A6", "marker": "TODO: drop the legacy", "truth": "KEEP", "acceptable": ["keep", "rewrite"], "survival_keys": ["bill-1421"], "rationale": "具名 keeper 的意图（BILL-1421 + billing team）"},
+        {"id": "A7", "marker": "TODO: clean this up", "truth": "DELETE", "acceptable": ["delete", "rewrite"], "survival_keys": [], "rationale": "裸意图：无主无触发器；改写为具名 keeper 亦可接受；原样保留计入错误保留"},
+        {"id": "A8", "marker": "see line 57", "truth": "REWRITE", "acceptable": ["rewrite", "delete"], "survival_keys": [], "rationale": "位置指针：应转形为命名（_install_rate_limiter）；删除可接受；原样保留计入错误保留"},
+        {"id": "A9", "marker": "format changed in v2.1", "truth": "DELETE", "acceptable": ["delete"], "survival_keys": [], "rationale": "旅程叙事（past 类）"},
+        {"id": "A10", "marker": "ops runbook RB-7", "truth": "KEEP", "acceptable": ["keep"], "survival_keys": ["rb-7", "runbook"], "rationale": "外部契约 + 具名 keeper（runbook 触发器）"}
+      ]
+    },
+    "session_store.js": {
+      "comments": [
+        {"id": "B1", "marker": "MIRROR of auth-service SessionPolicy", "truth": "KEEP", "acceptable": ["keep"], "survival_keys": ["sessionpolicy", "mirror_session_test"], "rationale": "镜像副本，坐标完备（权威家、不变量、续真测试）"},
+        {"id": "B2", "marker": "keep in sync with the mobile SDK", "truth": "REWRITE", "acceptable": ["rewrite", "delete"], "survival_keys": [], "rationale": "未声明坐标的镜像：应补声明或移除；原样保留计入错误保留"},
+        {"id": "B3", "marker": "Chrome evicts storage under memory pressure", "truth": "KEEP", "acceptable": ["keep"], "survival_keys": ["memory pressure", "best-effort", "best effort"], "rationale": "外部行为观测，反直觉，仓库无法守护"},
+        {"id": "B4", "marker": "iterate sessions and find expired ones", "truth": "DELETE", "acceptable": ["delete"], "survival_keys": [], "rationale": "复述代码"},
+        {"id": "B5", "marker": "sessions now live in Redis", "truth": "DELETE", "acceptable": ["delete"], "survival_keys": [], "rationale": "状态快照 + 无主意图"},
+        {"id": "B6", "marker": "no-await-in-loop", "truth": "KEEP", "acceptable": ["keep"], "survival_keys": ["no-await-in-loop"], "rationale": "pragma 自带的 why（顺序性约束）；另一流程拥有的文字"},
+        {"id": "B7", "marker": "ported from the callback version", "truth": "DELETE", "acceptable": ["delete"], "survival_keys": [], "rationale": "旅程叙事"},
+        {"id": "B8", "marker": "redis_session_ttl in infra/tuning.tf", "truth": "KEEP", "acceptable": ["keep", "rewrite"], "survival_keys": ["tuning.tf", "redis_session_ttl"], "rationale": "仓内路径=可猎的名字（修订后 §3 判据探针）；改为符号化命名亦可接受"},
+        {"id": "B9", "marker": "TTL was 15m until v3.2", "truth": "DELETE", "acceptable": ["delete"], "survival_keys": [], "rationale": "旅程叙事（含 #441 引用不改变其 past 性质）"}
+      ]
+    }
+  }
+}
