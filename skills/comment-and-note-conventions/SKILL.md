@@ -16,19 +16,21 @@ This skill is the discipline of that prose — what earns a comment, what must n
 
 These principles carry no language, framework, or worked example on purpose. They are meant to hold on the first project and the thousandth.
 
+This governs words in the project's record: strings seen by operators live by their operational contract, user-facing copy belongs to product and translation, and words inside vendored or upstream code are that upstream's record.
+
 ## The Iron Law
 
 ```
 EVERY DURABLE WORD IS A PROMISE — WRITE ONLY WHAT A MECHANISM, A NEIGHBORHOOD, OR A CUSTODIAN CAN KEEP.
 ```
 
-Three forces can keep a promise true, in descending strength. A **mechanism** fails — loudly, by itself — the moment the words stop matching the world: a test, a validator, a generator that rewrites what it owns. A **neighborhood** brings the falsifying change and the word together by proximity — same file, same diff, same review — so the truth gets its chance to be re-earned every time it is threatened. A **custodian** — a person, a process, a declared trigger — renews the word on purpose, because someone owns the promise. A word none of the three holds is not a reminder or an aspiration; it is a lie that has not happened yet. Write only what something can keep.
+Three forces can keep a promise true, in descending strength. A **mechanism** fails — loudly, by itself — the moment the words stop matching the world: a test, a validator, a generator that rewrites what it owns. A **neighborhood** brings the falsifying change and the word together by proximity — same file, same diff, same review — so the truth is met and re-earned every time the file is touched; a change that passes a word without meeting it has failed the neighborhood, and the word is drifting already. A **custodian** — a person, a process, a declared trigger — renews the word on purpose, because someone owns the promise. A word none of the three holds is not a reminder or an aspiration; it is a lie that has not happened yet. Write only what something can keep.
 
 ## 1. Words are believed — and belief is the liability
 
 Every sentence committed to the record spends two currencies: the reader's time when they read it, and the reader's trust if it ever turns out false. Stale words bankrupt the second currency — the very thing that made the words worth anything. The corollary is not "write less" but "write truer": one load-bearing fact outvalues a page of narration, because narration inflates exactly the surface a future reader must distrust.
 
-Words that carry nothing are deleted with no loss: the record becomes leaner, not poorer. Untrustworthy words can only be tolerated or hunted — they are never quietly believed again. Write each sentence for a reader who cannot check it, because that reader is the one you are writing for.
+Words that carry nothing are deleted with no loss: the record becomes leaner, not poorer. But "carrying nothing" is a verdict, earned only where no keeper stands, nothing breaks, and no search is saved. Untrustworthy words can only be tolerated or hunted — they are never quietly believed again. Write each sentence for a reader who cannot check it, because that reader is the one you are writing for.
 
 Rot has one shape, wherever it appears: the world moves, the words do not, and nothing connects the two.
 
@@ -52,13 +54,13 @@ A position is the least durable thing a sentence can depend on. Files move, symb
 
 The test of a reference is what can walk it: a symbol, a definition, a path in this repository — anything whose rename leaves a trail a tool or a reader can follow — is a name; a line number, a page anchor, a name whose rename is recorded in some other system, is a position. A reference that crosses systems should say so — and say that its drift will be silent.
 
-So there are exactly two honest ways to speak of the elsewhere. **Name it** — a name is a handle a future reader can pull, and where the tooling itself can walk to it — a symbol, a definition, a call graph — the tool carries the journey; a mechanism is kept by force. Or **say the fact here**, fully enough that the sentence stands without the trip: a fact stated at the point of need is paid for once, by the reader who needed it. What must never be written is a hand-drawn map.
+So there are exactly two honest ways to speak of the elsewhere. **Name it** — a name is a handle a future reader can pull, and where the tooling itself can walk to it — a symbol, a definition, a call graph — the tool carries the journey; a reference the tooling can resolve is a mechanism — it keeps its promise by failing loudly. Or **say the fact here**, fully enough that the sentence stands without the trip: a fact stated at the point of need is paid for once, by the reader who needed it. What must never be written is a hand-drawn map.
 
 ## 4. One home per fact — a second copy only with declared coordinates
 
-A fact has exactly one home. Every further copy is one reader's convenience paid for with a silent divergence: two copies cannot be corrected by the same act, so a day arrives when one of them is wrong — and nothing marks which. This is why prose must not restate what the code already declares (复述), why a document must not inventory what a source already lists, and why no comment should enumerate its callers — the calls declare themselves, and the declaration maintains itself for free.
+A fact has exactly one home. Every further copy is one reader's convenience paid for with a silent divergence: two copies cannot be corrected by the same act, so a day arrives when one of them is wrong — and nothing marks which. This is why prose must not restate what the code already declares (复述), why a document must not inventory what a source already lists, and why no comment should enumerate its callers where the tooling can keep the list itself — the calls declare themselves, and the declaration maintains itself for free; callers no tool can reach — dynamic wiring, outside consumers — are governed as external contracts, in prose that stands alone.
 
-Where a copy is truly unavoidable — a mirrored definition across a boundary no tool crosses — it may exist only with its coordinates declared (镜像坐标): name the authoritative home, state the invariant that binds the two (they must agree, exactly), name what renews the agreement — a check, a shared build step, a declared audit — and say what breaks when they drift. A copy with declared coordinates is a contract someone can police; a copy whose agreement nothing renews may not be written, coordinates or not — it is a countdown.
+Where a copy is truly unavoidable — a mirrored definition across a boundary no tool crosses — it may exist only with its coordinates declared (镜像坐标): name the authoritative home, state the invariant that binds the two (they must agree, exactly), name what renews the agreement — a check, a shared build step, a declared audit — and say what breaks when they drift. A copy with declared coordinates is a contract someone can police; a copy whose agreement nothing renews may not be written, coordinates or not: it is a countdown to a wrongness no one will be told about.
 
 ## 5. Never speak of now — or of what was
 
@@ -96,7 +98,9 @@ A note is not homeless writing. Its address is decided by the same question as e
 - **Decisions and their archaeology** — the road taken, the roads rejected, the constraints that forced the choice — belong to the decision's own record, with its date and status: superseded, not rewritten, so that the record remains true about itself.
 - **Intentions** — not yet, next, someday — belong to the tracker, where they have owners, schedules, and permission to die honestly. A plan written into the code is a promise made to no one. An intention that names its keeper — a ticket, an owner, a declared trigger — is not that plan: it may stand where its consequence lands, judged by its keeper's law. Where no tracker is reachable, a TODO naming an owner or a trigger is the keeper made visible. Only a bare intention, naming no keeper and no trigger, is relocated or dropped. A documented architectural debt with a scheduled repayment is held by its schedule — record it where the schedule lives.
 - **Current state** — what exists, what it counts, what it supports — belongs to the source that holds the state, or to a generated view of it. Never to a sentence someone would have to remember to edit.
-- **Working memory** — the half-formed, the scratch, the session's running notes, a person's or a machine's — belongs outside the project entirely, in whatever notebook its writer keeps. The repository is a record, not a desk; drafts written onto the record are how the record stops being worth reading.
+- **Working memory** — the half-formed, the scratch note (of words, not of artifacts), the session's running notes, a person's or a machine's — belongs outside the project entirely, in whatever notebook its writer keeps. The repository is a record, not a desk; drafts written onto the record are how the record stops being worth reading.
+
+The *why* of what must stay true stays beside its subject — at the smallest distance from the change that could falsify it.
 
 ## 8. Judging words already on the page
 
@@ -112,7 +116,7 @@ Three dispositions, in order of preference:
 
 **When the keeper cannot be checked from where you sit** — it lives in someone's head, in another system, or outside the repository — the disposition is Keep. Delete is earned only when you can say, concretely, that nothing breaks and no search is saved; where you cannot say it, keep the word.
 
-And this is a habit, not a campaign. Every time you change code, the words describing it are in front of you and the falsifying change is in your hands — reconcile them then, in the same diff, because that is the cheapest moment there will ever be. The duty's radius is the words this change touches; the rest of the record waits for its own change. Orphans left behind by a change — in code or in words — are the same kind of debt (see `architecture-thinking`).
+And this is a habit, not a campaign. Every time you change code, the words describing it are in front of you and the falsifying change is in your hands — reconcile them then, in the same diff, because that is the cheapest moment there will ever be. The duty's radius is the words this change touches; the rest of the record waits for its own change. Orphans left behind by a change — in code or in words — are the same kind of debt (the code-side orphan lists live in `architecture-thinking`; the word side is this section's own duty).
 
 ## Failure modes
 
@@ -121,20 +125,22 @@ Each of these is a way trust quietly dies:
 - The comment that narrates what the code plainly says — words spent buying back what the reader already had.
 - The second copy of a fact — accurate the day it was made, superstitious ever after.
 - The snapshot of the present — a rumor of the past, still wearing the present tense.
-- The list of callers — complete until the first caller it never heard about.
+- The list of callers no tool refreshes — complete until the first caller it never heard about.
 - The diary entry in the permanent record — someone's afternoon, frozen into everyone's forever.
-- The constraint with nothing enforcing it — an imperative with no police.
+- The constraint no keeper renews — an imperative no mechanism, no neighborhood, and no custodian stands behind.
 - The half sentence — a comment that means nothing until the reader takes the trip, and by then the trip is gone.
 - The over-vigilant audit — precision that mistook a load-bearing fact for clutter.
 - The map that outlived its ground — a pointer whose target moved on, and only the pointer stayed.
+- The word kept far from its subject — the change and the comment never meet, and only the comment ages.
 
 ## Final Rule
 
 ```
 A pointer to a place        → a map that ages as the ground moves
-A second copy of a fact     → two truths, one of them unguarded
+A second copy of a fact     → two truths, one of them kept by no one
 Words about "now"           → the past, wearing the present tense
 A restatement of the code   → the reader's trust, spent and unbought
+A word the change meets     → a truth re-earned where it stands
 What the code cannot say    → the comment that was always worth writing
 A promise with a keeper     → a word that stays true
 ```
