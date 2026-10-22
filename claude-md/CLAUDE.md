@@ -134,3 +134,12 @@ A problem rarely exists in isolation. When you find one issue, apply Context Pan
 ---
 
 **These guidelines are working if:** fewer unnecessary motions, fewer rewrites from overcomplication, and confusion surfaces rather than gets bypassed.
+
+---
+
+## Boundary — Search (Hard Rule)
+
+**Any code or file search and directory enumeration (ls/find/grep/read, etc.) is allowed only within the current working directory. Never traverse beyond the working-directory boundary to explore other directories (including ~/.m2, parent or sibling directories, the user's other projects, IDE configs, and similar).**
+
+- When framework/dependency behavior information is needed, prefer deriving it from the code, configs, and comments already in the current repo. If a behavior cannot be established from the repo, mark it explicitly as an "unverified assumption" and do not look it up outside the repo.
+- Build tools' (Maven, etc.) own reads/writes to the local repository count as tool behavior and are outside this restriction, but do not use them as a pretext to actively search anything beyond the build directory.
