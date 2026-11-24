@@ -116,7 +116,7 @@ Three dispositions, in order of preference:
 
 **When the keeper cannot be checked from where you sit** — it lives in someone's head, in another system, or outside the repository — the disposition is Keep. Delete is earned only when you can say, concretely, that nothing breaks and no search is saved; where you cannot say it, keep the word.
 
-And this is a habit, not a campaign. Every time you change code, the words describing it are in front of you and the falsifying change is in your hands — reconcile them then, in the same diff, because that is the cheapest moment there will ever be. The duty's radius is the words this change touches; the rest of the record waits for its own change. Orphans left behind by a change — in code or in words — are the same kind of debt (the code-side orphan lists live in `architecture-thinking`; the word side is this section's own duty).
+And this is a habit, not a campaign. Every time you change code, the words describing it are in front of you and the falsifying change is in your hands — reconcile them then, in the same diff, because that is the cheapest moment there will ever be. The duty's radius is the words this change touches; the rest of the record waits for its own change. Orphans left behind by a change — in code or in words — are the same kind of debt.
 
 ## Failure modes
 

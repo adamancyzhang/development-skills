@@ -1,7 +1,7 @@
 ---
 name: architecture-thinking
 description: "MANDATORY before any code change: assess architectural impact, verify alignment, ensure progressiveness. Every edit must serve the architecture and enable future iteration."
-version: 4.1.0
+version: 4.2.0
 author: Adamancy Zhang
 license: MIT
 ---
@@ -305,3 +305,13 @@ Progressiveness         → every change makes the next change easier, not harde
 Local fix, global rot   → blocked
 Otherwise               → architectural debt, compounding daily
 ```
+
+## Phase-Specific References
+
+The Five Gates and Core Principles are the common frame. When the work has a clear phase, read the matching reference for that phase's principles:
+
+| Phase | Reference |
+|---|---|
+| Building something new | `references/new-feature-development.md` |
+| Modifying existing code | `references/modifying-existing-features.md` |
+| Deleting code or a feature | `references/deleting-features.md` |
