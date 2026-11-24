@@ -1,7 +1,7 @@
 ---
 name: architecture-thinking
 description: "MANDATORY before any code change: assess architectural impact, verify alignment, ensure progressiveness. Every edit must serve the architecture and enable future iteration."
-version: 4.0.0
+version: 4.1.0
 author: Adamancy Zhang
 license: MIT
 ---
@@ -117,6 +117,17 @@ Build only what you need now to support the decisions you've made. Do not build 
 
 If none of these apply, defer. Structure added without evidence of need is speculation. Most speculation is wrong.
 
+### Model the Difference at Its Layer
+
+Minimality answers "how much structure"; it does not answer "where the difference lives". When a change carries a difference, name its kind before editing:
+- a new value on a dimension the model already has → express it as data at the existing seam;
+- a new dimension the model does not have → extend the abstraction so the difference becomes a first-class instance;
+- a new responsibility or entity → introduce the seam it requires.
+
+A flag, optional parameter, branch, or subclass override added at the call site only to express such a difference is a signal that the difference belongs to a higher layer. Such a patch pays for the current case by taxing every future one: each variant adds another condition, and removing one means untangling them.
+
+Minimum diff surface constrains where you edit, not where the difference lives. Choose the layer first, then keep the edit as small as that layer allows.
+
 ### Progressiveness
 
 ```
@@ -131,6 +142,7 @@ Today's feature is tomorrow's legacy code. Every change you make either opens op
 3. **Conceptual integrity:** After this change, does the system still look like it was designed by one mind? Or does it read like a series of disconnected fixes?
 4. **Abstraction quality:** If you added an abstraction, is it based on a real pattern in the domain, or is it a convenience wrapper? Convenience abstractions leak. Domain abstractions endure.
 5. **Complexity budget:** Did this change add more complexity than the problem warrants? Every conditional branch, every configuration option, every new concept in the codebase is a tax on every future change.
+6. **Difference placement:** When the next similar variant arrives, is it a data/configuration addition at an existing seam, or another special branch? Another branch means the difference is modeled at the wrong layer.
 
 **Progressiveness is not prediction.** You are not guessing what features will be needed. You are ensuring that whatever features are needed, the system can accommodate them without architectural surgery.
 

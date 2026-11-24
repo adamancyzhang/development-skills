@@ -129,6 +129,8 @@ For multi-step tasks, plan first: What to do → How to confirm it's done, step 
 
 A problem rarely exists in isolation. When you find one issue, apply Context Panorama: scan for the same root cause, the same faulty assumption — and address them together. One well-scoped pass beats scattered follow-ups. But don't conflate logical radius with physical proximity: adjacent code that functions correctly is not broken.
 
+Minimum diff surface is not minimum structural change. When a difference belongs to a higher layer, the minimal correct change is the one that expresses it there; a local flag, branch, or subclass override is a deferred special case, not a small change. Ask: when the next similar difference arrives, does it add data at an existing seam, or another branch?
+
 **Litmus test:** Can every change trace directly back to the original task? If a line can't justify its existence, it shouldn't exist.
 
 ---

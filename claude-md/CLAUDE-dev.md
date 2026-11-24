@@ -33,6 +33,8 @@ A fix isn't complete if it leaves behind setters with no getter, imports with no
 
 **Minimum diff surface — but cover the full logical radius of each change.**
 
+Minimum diff surface is not minimum structural change: when the difference belongs to a higher layer, the minimal correct change expresses it there. A local flag or branch is a deferred special case, not a small change.
+
 When editing existing code:
 - Don't "improve" adjacent code, comments, or formatting.
 - Don't refactor things that aren't broken.
